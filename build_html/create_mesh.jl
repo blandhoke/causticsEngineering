@@ -1,53 +1,35 @@
-using Images
-# using Plots
-# gr()
+# For later...
+const grid_definition = 64
 
 # This implements the method of caustics control described in this paper:
 # https://www.researchgate.net/profile/Yonghao_Yue/publication/274483217_Poisson-Based_Continuous_Surface_Generation_for_Goal-Based_Caustics/links/575b4ceb08ae414b8e467a5f.pdf
 
+# Comments  [Hack-a-day](https://hackaday.com/2021/08/23/math-optics-and-cnc-combine-to-hide-secret-images-in-acrylic/) also refer this paper:
+# [https://rgl.epfl.ch/publications/NimierDavidVicini2019Mitsuba2]()
 
-mutable struct Point3D
-    x::Float64
-    y::Float64
-    z::Float64
-    ix::Int
-    iy::Int
-end
 
-struct Triangle
-    pt1::Int64
-    pt2::Int64
-    pt3::Int64
-end
-
-struct Mesh
-    nodes::Vector{Point3D}
-    nodeArray::Matrix{Point3D}
-    triangles::Vector{Triangle}
-    width::Int
-    height::Int
-end
-
+"""
+$(SIGNATURES)
+"""
 function squareMesh(width::Int, height::Int)
     # This func returns a square mesh, centered on zero, with (width * height) nodes
     nodeList = Vector{Point3D}(undef, height * width)
     nodeArray = Matrix{Point3D}(undef, width, height)
     count = 1
     midpoint = width / 2
-    for y = 1:height
-        for x = 1:width
-            newPoint = Point3D(x, y, 0, x, y)
-            nodeList[count] = newPoint
-            nodeArray[x, y] = newPoint
-            count += 1
-        end
+    for y = 1:height, x = 1:width
+        newPoint = Point3D(x, y, 0, x, y)
+        nodeList[count] = newPoint
+        nodeArray[x, y] = newPoint
+        count += 1
+
     end
 
     triangles = Vector{Triangle}(undef, (width - 1) * (height - 1) * 2)
     count = 1
-    for y = 1:(height - 1)
-        for x = 1:(width - 1)
-          # here x and y establish the column of squares we're in
+    for y = 1:(height-1)
+        for x = 1:(width-1)
+            # here x and y establish the column of squares we're in
             index_ul = (y - 1) * width + x
             index_ur = index_ul + 1
 
@@ -61,34 +43,34 @@ function squareMesh(width::Int, height::Int)
         end
     end
 
-    newMesh = Mesh(nodeList, nodeArray, triangles, width, height)
+    return Mesh(nodeList, nodeArray, triangles, width, height)
 end
 
-function dist(p1::Point3D, p2::Point3D)
-    dx = p2.x - p1.x
-    dy = p2.y - p1.y
-    sqrt(dx * dx + dy * dy)
-end
 
-function midpoint(p1::Point3D, p2::Point3D)
-  # a midpoint is just the average between two points
-    Point3D(.5p1.x + .5p2.x, .5p1.y + .5p2.y, .5p1.z + .5p2.z, 0, 0)
-end
-
+"""
+$(SIGNATURES)
+"""
 function centroid(mesh::Mesh, index::Int)
-  # Warning: not guaranteed to work in 3D?
+    # Warning: not guaranteed to work in 3D?
     triangle = mesh.triangles[index]
     p1 = mesh.nodes[triangle.pt1]
     p2 = mesh.nodes[triangle.pt2]
     p3 = mesh.nodes[triangle.pt3]
-    centroid(p1, p2, p3)
+    return centroid(p1, p2, p3)
 end
 
-function centroid(p1::Point3D, p2::Point3D, p3::Point3D)
-    Point3D(1 / 3 * (p1.x + p2.x + p3.x), 1 / 3 * (p1.y + p2.y + p3.y), 1 / 3 * (p1.z + p2.z + p3.z), 0, 0)
-end
 
-function findT(p1::Point3D, p2::Point3D, p3::Point3D, dp1::Point3D, dp2::Point3D, dp3::Point3D)
+"""
+$(SIGNATURES)
+"""
+function findT(
+    p1::Point3D,
+    p2::Point3D,
+    p3::Point3D,
+    dp1::Point3D,
+    dp2::Point3D,
+    dp3::Point3D,
+)
     # Given 3 points and 3 velocities, calculate the t required to bring the area of that triangle to zero
     x1 = p2.x - p1.x
     y1 = p2.y - p1.y
@@ -105,45 +87,56 @@ function findT(p1::Point3D, p2::Point3D, p3::Point3D, dp1::Point3D, dp2::Point3D
     a = u1 * v2 - u2 * v1
     b = x1 * v1 + y2 * u1 - x2 * v1 - y1 * u2
     c = x1 * y2 - x2 * y1
+
     if a != 0
         quotient = b^2 - 4a * c
         if quotient >= 0
             d = sqrt(quotient)
-            (-b - d) / 2a, (-b + d) / 2a
+            return (-b - d) / 2a, (-b + d) / 2a
         else
-            -123.0, -123.0
+            return -123.0, -123.0
         end
     else
         # cool, there just isn't any dependence on t^2, but there is still on t!
-        -c / b, -c / b
+        return -c / b, -c / b
     end
 end
 
-function triangle_area(mesh::Mesh, index::Int)
-    triangle = mesh.triangles[index]
-    pt1 = mesh.nodes[triangle.pt1]
-    pt2 = mesh.nodes[triangle.pt2]
-    pt3 = mesh.nodes[triangle.pt3]
-    triangle_area(pt1, pt2, pt3)
-end
 
-function triangle_area(p1::Point3D, p2::Point3D, p3::Point3D)
-    a = dist(p1, p2)
-    b = dist(p2, p3)
-    c = dist(p3, p1)
-    s = (a + b + c) / 2
-    sqrt(s * (s - a) * (s - b) * (s - c))
-end
-
-
-function saveObj(mesh::Mesh, filename::String; scale=1.0, scalez=1.0, reverse=false, flipxy=false)
-  # This function saves the mesh object in stl format
+"""
+$(SIGNATURES)
+"""
+function saveObj!(
+    mesh::Mesh,
+    filename::String;
+    scale = 1.0,
+    scalez = 1.0,
+    reverse = false,
+    flipxy = false,
+)
+    # This function saves the mesh object in stl format
     open(filename, "w") do io
         for vertex in mesh.nodes
             if flipxy
-                println(io, "v ", vertex.y * scale, " ", vertex.x * scale, " ", vertex.z * scalez)
+                println(
+                    io,
+                    "v ",
+                    vertex.y * scale,
+                    " ",
+                    vertex.x * scale,
+                    " ",
+                    vertex.z * scalez,
+                )
             else
-                println(io, "v ", vertex.x * scale, " ", vertex.y * scale, " ", vertex.z * scalez)
+                println(
+                    io,
+                    "v ",
+                    vertex.x * scale,
+                    " ",
+                    vertex.y * scale,
+                    " ",
+                    vertex.z * scalez,
+                )
             end
         end
 
@@ -159,12 +152,17 @@ function saveObj(mesh::Mesh, filename::String; scale=1.0, scalez=1.0, reverse=fa
     end
 end
 
+
+"""
+$(SIGNATURES)
+"""
 function Obj2Mesh(filename)
     lines = readlines(filename)
 
     vertexLines = [l for l in lines if startswith(l, "v")]
     nodeList = Vector{Point3D}(undef, size(vertexLines))
     count = 1
+
     for line in vertexLines
         elements = split(line, " ")
         x = parse(Float64, elements[2])
@@ -179,203 +177,152 @@ function Obj2Mesh(filename)
     triangles = Vector{Triangle}(undef, size(faceLines))
     for line in faceLines
         elements = split(line, " ")
-        triangle = Triangle(parse(Int64, elements[2]), parse(Int64, elements[3]), parse(Int64, elements[4]))
+        triangle = Triangle(
+            parse(Int64, elements[2]),
+            parse(Int64, elements[3]),
+            parse(Int64, elements[4]),
+        )
     end
 
     dimsLines = [l for l in lines if startswith(l, "dims")]
     elements = split(dimsLines[1], " ")
 
-    newMesh = Mesh(nodeList, triangles, parse(Int64, elements[2]), parse(Int64, elements[3]))
+    return Mesh(nodeList, triangles, parse(Int64, elements[2]), parse(Int64, elements[3]))
 end
 
+
+"""
+$(SIGNATURES)
+"""
 function ∇(f::Matrix{Float64})
-    w, h = size(f)
-    ∇fᵤ = Matrix{Float64}(undef, w, h)   # the right edge will be filled with zeros
-    ∇fᵥ = Matrix{Float64}(undef, w, h)   # the buttom edge will be filled with zeros
+    width, height = size(f)
+    ∇fᵤ = zeros(Float64, width, height)   # the right edge will be filled with zeros
+    ∇fᵥ = zeros(Float64, width, height)   # the buttom edge will be filled with zeros
 
-    for x = 1:w
-        for y = 1:h
-            if x == w
-                ∇fᵤ[x, y] = 0
-            else
-                ∇fᵤ[x, y] = f[x + 1, y] - f[x, y]
-            end
-        end
-    end
-
-    for x = 1:w
-        for y = 1:h
-            if y == h
-                ∇fᵥ[x, y] = 0
-            else
-                ∇fᵥ[x, y] = f[x, y + 1] - f[x, y]
-            end
-        end
+    for x = 1:width, y = 1:height
+        ∇fᵤ[x, y] = x == w ? 0 : f[x+1, y] - f[x, y]
+        ∇fᵥ[x, y] = y == h ? 0 : f[x, y+1] - f[x, y]
     end
 
     return ∇fᵤ, ∇fᵥ
 end
 
 
-
+"""
+$(SIGNATURES)
+"""
 function getPixelArea(mesh::Mesh)
     # A Mesh is a grid of 3D points. The X and Y coordinates are not necessarily aligned or square
     # The Z coordinate represents the value. brightness is just proportional to area.
-    pixelAreas = Matrix{Float64}(undef, mesh.width-1, mesh.height-1)
-    for x = 1:mesh.width-1
-        for y = 1:mesh.height-1
-            upperLeft = mesh.nodeArray[x, y]
-            upperRight = mesh.nodeArray[x + 1, y]
-            lowerLeft = mesh.nodeArray[x, y + 1]
-            lowerRight = mesh.nodeArray[x + 1, y + 1]
+    pixelAreas = Matrix{Float64}(undef, mesh.width - 1, mesh.height - 1)
+    for x = 1:mesh.width-1, y = 1:mesh.height-1
+        upperLeft = mesh.nodeArray[x, y]
+        upperRight = mesh.nodeArray[x+1, y]
 
-            #=
-            *------*
-            |    / |
-            |   /  |
-            |  /   |
-            | /    |
-            *------*
-            =#
-            area = triangle_area(lowerLeft, upperRight, upperLeft) + triangle_area(lowerLeft, lowerRight, upperRight)
+        lowerLeft = mesh.nodeArray[x, y+1]
+        lowerRight = mesh.nodeArray[x+1, y+1]
 
-            pixelAreas[x, y] = area
-        end
+        #=
+        *------*
+        |    / |
+        |   /  |
+        |  /   |
+        | /    |
+        *------*
+        =#
+        pixelAreas[x, y] =
+            triangle_area(lowerLeft, upperRight, upperLeft) +
+            triangle_area(lowerLeft, lowerRight, upperRight)
     end
-    pixelAreas
+
+    return pixelAreas
 end
 
 
+"""
+$(SIGNATURES)
+"""
 function relax!(matrix::Matrix{Float64}, D::Matrix{Float64})
+
+    # ω = 2 / (1 + π / width)
+    ω = 1.99
+
     # This function implements successive over relaxation for a matrix and its associated error matrix
     # There is a hardcoded assumption of Neumann boundary conditions--that the derivative across the
     # boundary must be zero in all cases. See:
     # https://math.stackexchange.com/questions/3790299/how-to-iteratively-solve-poissons-equation-with-no-boundary-conditions
-    # sz = size(matrix)
-    # width = sz[1]
-    # height = sz[2]
+
     width, height = size(matrix)
-    # ω = 2 / (1 + π / width)
-    ω = 1.99
-    # println("OMEGA $(ω)")
+
     max_update = 0
-    for y = 1:height
-        for x = 1:width
-            val = matrix[x, y]
-
-            if x == 1 && y == 1
-                # Top left corner
-                val_down = matrix[x, y + 1]
-                val_right = matrix[x + 1, y]
-                delta = ω / 2 * (val_down + val_right - 2 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif x == 1 && y == height
-                # Bottom left corner
-                val_up = matrix[x, y - 1]
-                val_right = matrix[x + 1, y]
-                delta = ω / 2 * (val_up + val_right - 2 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif x == width && y == 1
-                # Top right corner
-                val_down = matrix[x, y + 1]
-                val_left = matrix[x - 1, y]
-                delta = ω / 2 * (val_down + val_left - 2 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif x == width && y == height
-                # Bottom right corner
-                val_up = matrix[x, y - 1]
-                val_left = matrix[x - 1, y]
-                delta = ω / 2 * (val_up + val_left - 2 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-
-            elseif x == 1
-                # Along the left edge, but not the top or buttom corner
-                val_up = matrix[x, y - 1]
-                val_down = matrix[x, y + 1]
-                val_right = matrix[x + 1, y]
-                delta = ω / 3 * (val_up + val_down + val_right - 3 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif x == width
-                # Along the right edge, but not the top or buttom corner
-                val_up = matrix[x, y - 1]
-                val_down = matrix[x, y + 1]
-                val_left = matrix[x - 1, y]
-                delta = ω / 3 * (val_up + val_down + val_left - 3 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif y == 1
-                # Along the top edge, but not the left or right corner
-                val_down = matrix[x, y + 1]
-                val_left = matrix[x - 1, y]
-                val_right = matrix[x + 1, y]
-                delta = ω / 3 * (val_down + val_left + val_right - 3 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif y == height
-                # Along the bottom edge, but not the left or right corner
-                val_up = matrix[x, y - 1]
-                val_left = matrix[x - 1, y]
-                val_right = matrix[x + 1, y]
-                delta = ω / 3 * (val_up + val_left + val_right - 3 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            else
-                # The normal case, in the middle of the mesh!
-                val_up = matrix[x, y - 1]
-                val_down = matrix[x, y + 1]
-                val_left = matrix[x - 1, y]
-                val_right = matrix[x + 1, y]
-
-                # The new way
-                # ∇x₁ =
+    for x = 1:width, y = 1:height
+        val = matrix[x, y]
+        val_up = matrix[x, y-1]
+        val_down = matrix[x, y+1]
+        val_left = matrix[x-1, y]
+        val_right = matrix[x+1, y]
 
 
-                # The old way
-                delta = ω / 4 * (val_up + val_down + val_left + val_right - 4 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            end
-            # node.z = .25 * (node_up.z + node_down.z + node_left.z + node_right.z) # simple averaging
-            # node.z += ω/4 * (node_up.z + node_down.z + node_left.z + node_right.z - 4 * node.z)
+        if x == 1 && y == 1
+            # Top left corner
+            delta = 1 / 2 * (val_down + val_right - D[x, y])
+            continue # To skip the matrix[x, y] increment
 
-            # matrix[x, y] += ω/4 * (val_up + val_down + val_left + val_right - 4 * val - D[x, y])
+        elseif x == 1 && y == height
+            # Bottom left corner
+            delta = 1 / 2 * (val_up + val_right - D[x, y])
+
+        elseif x == width && y == 1
+            # Top right corner
+            delta = 1 / 2 * (val_down + val_left - D[x, y])
+
+        elseif x == width && y == height
+            # Bottom right corner
+            delta = 1 / 2 * (val_up + val_left - D[x, y])
+
+        elseif x == 1
+            # Along the left edge, but not the top or buttom corner
+            delta = 1 / 3 * (val_up + val_down + val_right - D[x, y])
+
+        elseif x == width
+            # Along the right edge, but not the top or buttom corner
+            delta = 1 / 3 * (val_up + val_down + val_left - D[x, y])
+
+        elseif y == 1
+            # Along the top edge, but not the left or right corner
+            delta = 1 / 3 * (val_down + val_left + val_right - D[x, y])
+
+        elseif y == height
+            # Along the bottom edge, but not the left or right corner
+            delta = 1 / 3 * (val_up + val_left + val_right - D[x, y])
+
+        else
+            # The new way
+            # ∇x₁ =
+            # The old way
+            delta = 1 / 4 * (val_up + val_down + val_left + val_right - D[x, y])
         end
+
+        delta = ω * (delta - val)
+        matrix[x, y] += delta
+
+        max_update = max(max_update, abs(delta))
+
+        # node.z = .25 * (node_up.z + node_down.z + node_left.z + node_right.z) # simple averaging
+        # node.z += ω/4 * (node_up.z + node_down.z + node_left.z + node_right.z - 4 * node.z)
+
+        # matrix[x, y] += ω/4 * (val_up + val_down + val_left + val_right - 4 * val - D[x, y])
     end
 
-    max_update
-
-    # for y = 1:height
-    #     for x = 1:width
-    #         val = matrix[x, y]
-    #     end
-    # end
+    return max_update
 end
 
+
+"""
+$(SIGNATURES)
+"""
 function matrix_to_mesh(matrix::Matrix{Float64})
-    # This function takes a 512x512 matrix and returns a 512x512 mesh
+    # This function takes a grid_definitionxgrid_definition matrix and returns a grid_definitionxgrid_definition mesh
     w, h = size(matrix)
     retval = squareMesh(w, h)
     for x = 1:w
@@ -385,51 +332,46 @@ function matrix_to_mesh(matrix::Matrix{Float64})
             node.z = matrix[x, y]
         end
     end
-    retval
+    return retval
 end
 
 
-
+"""
+$(SIGNATURES)
+"""
 function marchMesh!(mesh::Mesh, ϕ::Matrix{Float64})
     ∇ϕᵤ, ∇ϕᵥ = ∇(ϕ)
 
-    imgWidth, imgHeight = size(ϕ)   # should be 512x512
+    imgWidth, imgHeight = size(ϕ)   # should be grid_definitionxgrid_definition
 
     # For each point in the mesh we need to figure out its velocity
     velocities = Matrix{Point3D}(undef, mesh.width, mesh.height)
 
-    for x in 1:mesh.width
-        for y in 1:mesh.height
-            # XY coordinates in the mesh ARE XY coordinates in the image. The mesh just needs an extra row and column
-            # at the bottom right edge so that the triangles can be closed
 
+    for x = 1:mesh.width, y = 1:mesh.height
+        # XY coordinates in the mesh ARE XY coordinates in the image. The mesh just needs an extra row and column
+        # at the bottom right edge so that the triangles can be closed
 
-            if x == mesh.width
-                u = 0
-            else
-                if y == mesh.height
-                    u = ∇ϕᵤ[x, y - 1]
-                else
-                    u = ∇ϕᵤ[x, y]
-                end
-            end
-
-            if y == mesh.height
-                v = 0
-            else
-                if x == mesh.width
-                    v = ∇ϕᵥ[x - 1, y]
-                else
-                    v = ∇ϕᵥ[x, y]
-                end
-            end
-            velocities[x, y] = Point3D(-u, -v, 0, 0, 0)
+        if x == mesh.width
+            u = 0
+        else
+            u = y == mesh.height ? ∇ϕᵤ[x, y-1] : ∇ϕᵤ[x, y]
         end
+
+        if y == mesh.height
+            v = 0
+        else
+            v = x == mesh.width ? ∇ϕᵥ[x-1, y] : ∇ϕᵥ[x, y]
+        end
+
+        velocities[x, y] = Point3D(-u, -v, 0, 0, 0)
     end
+
 
 
     min_t = 10000
     triangleCount = 1
+
     for triangle in mesh.triangles
         p1 = mesh.nodes[triangle.pt1]
         p2 = mesh.nodes[triangle.pt2]
@@ -463,20 +405,25 @@ function marchMesh!(mesh::Mesh, ϕ::Matrix{Float64})
     # saveObj(mesh, "gateau.obj")
 end
 
-function quantifyLoss(D, suffix, img)
+
+"""
+$(SIGNATURES)
+"""
+function quantifyLoss!(D, suffix, img)
     println("Loss:")
     println("Minimum: $(minimum(D))")
     println("Maximum: $(maximum(D))")
-    blue = zeros(size(D))
-    blue[D .> 0] = D[D .> 0]
 
+    blue = zeros(size(D))
+    blue[D.>0] = D[D.>0]
     red = zeros(size(D))
-    red[D .< 0] = -D[D .< 0]
+    red[D.<0] = -D[D.<0]
     green = zeros(size(D))
 
     println(size(blue))
     println(size(red))
     println(size(green))
+
     rgbImg = RGB.(red, green, blue)'
     save("loss_$(suffix).png", map(clamp01nan, rgbImg))
 
@@ -488,16 +435,20 @@ function quantifyLoss(D, suffix, img)
     # save("actual_$(suffix).png", outputImg)
 end
 
+
+"""
+$(SIGNATURES)
+"""
 function oneIteration(meshy, img, suffix)
-    # remember meshy is 512x512 just like the image 512x512
-    # so LJ is 512x512
+    # remember meshy is grid_definitionxgrid_definition just like the image grid_definitionxgrid_definition
+    # so LJ is grid_definitionxgrid_definition
     LJ = getPixelArea(meshy)
     D = Float64.(LJ - img)
-    
+
     # Save the loss image as a png
     println(minimum(D))
     println(maximum(D))
-    quantifyLoss(D, suffix, img)
+    quantifyLoss!(D, suffix, img)
 
     # ∇Lᵤ, ∇Lᵥ = ∇(D)
     # plotVAsQuiver(∇Lᵤ, ∇Lᵥ, stride=10, scale=10, max_length=200)
@@ -516,29 +467,35 @@ function oneIteration(meshy, img, suffix)
         if i % 500 == 0
             println(max_update)
         end
+
         if max_update < 0.00001
             println("Convergence reached at step $(i) with max_update of $(max_update)")
             break
         end
     end
 
-    saveObj(matrix_to_mesh(ϕ * .02), "phi_$(suffix).obj", reverse=false, flipxy=true)
+    saveObj!(matrix_to_mesh(ϕ * 0.02), "phi_$(suffix).obj", reverse = false, flipxy = true)
     # plotAsQuiver(ϕ * -1.0, stride=30, scale=1.0, max_length=200, flipxy=true, reversex=false, reversey=false)
     # saveObj(matrix_to_mesh(D * 10), "D_$(suffix).obj")
 
     # Now we need to march the x,y locations in our mesh according to this gradient!
     marchMesh!(meshy, ϕ)
-    saveObj(meshy, "mesh_$(suffix).obj", flipxy=true)
+    saveObj!(meshy, "mesh_$(suffix).obj", flipxy = true)
 end
 
-function setHeights!(mesh, heights, heightScale=1.0, heightOffset=50)
+
+"""
+$(SIGNATURES)
+"""
+function setHeights!(mesh, heights, heightScale = 1.0, heightOffset = 50)
     width, height = size(heights)
-    for y = 1:height
-        for x = 1:width
-            mesh.nodeArray[x, y].z = heights[x, y] * heightScale + heightOffset
-            if x == 100 && y == 100
-                println("Example heights: $(heights[x, y])  and  $(heights[x, y] * heightScale) and $(heights[x, y] * heightScale + heightOffset)")
-            end
+
+    for y = 1:height, x = 1:width
+        mesh.nodeArray[x, y].z = heights[x, y] * heightScale + heightOffset
+        if x == 100 && y == 100
+            println(
+                "Example heights: $(heights[x, y])  and  $(heights[x, y] * heightScale) and $(heights[x, y] * heightScale + heightOffset)",
+            )
         end
     end
 
@@ -558,6 +515,9 @@ function setHeights!(mesh, heights, heightScale=1.0, heightOffset=50)
 end
 
 
+"""
+$(SIGNATURES)
+"""
 function setHeights(mesh, heights)
     width = mesh.width
     height = mesh.height
@@ -567,8 +527,8 @@ function setHeights(mesh, heights)
     scale = 1
     count = 1
     w, h = size(heights)
-    for y = 1: height
-        for x = 1: width
+    for y = 1:height
+        for x = 1:width
             count += 1
             point = mesh.nodes[count]
 
@@ -579,10 +539,14 @@ function setHeights(mesh, heights)
         end
     end
 
-    Mesh(nodes, nodeArray, triangles, width, height)
+    return Mesh(nodes, nodeArray, triangles, width, height)
 end
 
-function solidify(inputMesh, offset=100)
+
+"""
+$(SIGNATURES)
+"""
+function solidify(inputMesh, offset = 100)
     width = inputMesh.width
     height = inputMesh.height
     totalNodes = width * height * 2
@@ -593,13 +557,15 @@ function solidify(inputMesh, offset=100)
     # imagine a 4x4 image. 4 * 2 + 2 * 2 = 12
     numEdgeNodes = width * 2 + (height - 2) * 2
 
-    numTrianglesTop = (width-1)*(height-1) * 2
+    numTrianglesTop = (width - 1) * (height - 1) * 2
     numTrianglesBottom = numTrianglesTop
     numTrianglesEdges = numEdgeNodes * 2
 
     totalTriangles = numTrianglesBottom + numTrianglesTop + numTrianglesEdges
 
-    println("Specs: $(width)  $(height)  $(totalNodes)  $(numEdgeNodes)  $(numTrianglesBottom) $(totalTriangles)")
+    println(
+        "Specs: $(width)  $(height)  $(totalNodes)  $(numEdgeNodes)  $(numTrianglesBottom) $(totalTriangles)",
+    )
 
     # Build the bottom surface
     count = 1
@@ -635,9 +601,9 @@ function solidify(inputMesh, offset=100)
     triangles = Vector{Triangle}(undef, totalTriangles)
     # Build the triangles for the bottom surface
     count = 1
-    for y = 1:(height - 1)
-        for x = 1:(width - 1)
-          # here x and y establish the column of squares we're in
+    for y = 1:(height-1)
+        for x = 1:(width-1)
+            # here x and y establish the column of squares we're in
             index_ul = (y - 1) * width + x
             index_ur = index_ul + 1
 
@@ -653,13 +619,15 @@ function solidify(inputMesh, offset=100)
 
     println("We've filled up $(count-1) triangles")
     if count != numTrianglesBottom + 1
-        println("Hmm aren't count and triangles bottom equal? $(count) vs $(numTrianglesBottom + 1)")
+        println(
+            "Hmm aren't count and triangles bottom equal? $(count) vs $(numTrianglesBottom + 1)",
+        )
     end
 
     # Build the triangles for the top surface
-    for y = 1:(height - 1)
-        for x = 1:(width - 1)
-          # here x and y establish the column of squares we're in
+    for y = 1:(height-1)
+        for x = 1:(width-1)
+            # here x and y establish the column of squares we're in
             index_ul = (y - 1) * width + x + totalNodes / 2
             index_ur = index_ul + 1
 
@@ -677,7 +645,7 @@ function solidify(inputMesh, offset=100)
 
     # Build the triangles to close the mesh
     x = 1
-    for y = 1:(height - 1)
+    for y = 1:(height-1)
         ll = (y - 1) * width + x
         ul = ll + totalNodes / 2
         lr = y * width + x
@@ -689,7 +657,7 @@ function solidify(inputMesh, offset=100)
     end
 
     x = width
-    for y = 1:(height - 1)
+    for y = 1:(height-1)
         ll = (y - 1) * width + x
         ul = ll + totalNodes / 2
         lr = y * width + x
@@ -701,7 +669,7 @@ function solidify(inputMesh, offset=100)
     end
 
     y = 1
-    for x = 2: width
+    for x = 2:width
         ll = (y - 1) * width + x
         ul = ll + totalNodes / 2
         lr = (y - 1) * width + (x - 1)
@@ -713,7 +681,7 @@ function solidify(inputMesh, offset=100)
     end
 
     y = height
-    for x = 2: width
+    for x = 2:width
         ll = (y - 1) * width + x
         ul = ll + totalNodes / 2
         lr = (y - 1) * width + (x - 1)
@@ -724,9 +692,13 @@ function solidify(inputMesh, offset=100)
         count += 1
     end
 
-    Mesh(nodeList, nodeArrayBottom, triangles, width, height)
+    return Mesh(nodeList, nodeArrayBottom, triangles, width, height)
 end
 
+
+"""
+$(SIGNATURES)
+"""
 function findSurface(mesh, image, f, imgWidth)
     width, height = size(image)
 
@@ -739,8 +711,8 @@ function findSurface(mesh, image, f, imgWidth)
     # η = 1.49
     n₂ = 1
     n₁ = 1.49
-    Nx = Matrix{Float64}(undef, width + 1, height + 1)
-    Ny = Matrix{Float64}(undef, width + 1, height + 1)
+    Nx = zeros(Float64, width + 1, height + 1)
+    Ny = zeros(Float64, width + 1, height + 1)
 
     for j = 1:height
         for i = 1:width
@@ -763,40 +735,39 @@ function findSurface(mesh, image, f, imgWidth)
         end
     end
 
-    divergence = Matrix{Float64}(undef, width, height)
+    divergence = zeros(Float64, width, height)
     # We need to find the divergence of the Vector field described by Nx and Ny
 
-    for j = 1:height
-        for i = 1:width
-            δx = (Nx[i+1, j] - Nx[i, j])
-            δy = (Ny[i, j+1] - Ny[i, j])
-            divergence[i, j] = δx + δy
+    for j = 1:height, i = 1:width
+        δx = (Nx[i+1, j] - Nx[i, j])
+        δy = (Ny[i, j+1] - Ny[i, j])
+        divergence[i, j] = δx + δy
 
-            if i == 100 && j == 100
-                println("div: $(divergence[i, j])")
-            end
+        if i == 100 && j == 100
+            println("div: $(divergence[i, j])")
         end
     end
     println("Have all the divergences")
 
-    h = Matrix{Float64}(undef, width, height)
+    h = zeros(Float64, width, height)
     max_update = 0
     for i = 1:10240/4
         max_update = relax!(h, divergence)
 
-        if i % 100 == 0
-            println(max_update)
-        end
-        if max_update < 0.00001
+        i % 100 == 0 && println(max_update)
+        max_update < 0.00001 ||
             println("Convergence reached at step $(i) with max_update of $(max_update)")
-            break
-        end
+        break
     end
     # saveObj(matrix_to_mesh(h / 10), "heightmap.obj")
-    h, metersPerPixel
+    return h, metersPerPixel
 end
 
-function testSquareMesh()
+
+"""
+$(SIGNATURES)
+"""
+function testSquareMesh!()
     mesh = squareMesh(100, 50)
 
     println(mesh.nodeArray[1, 1])
@@ -812,45 +783,53 @@ function testSquareMesh()
 
 end
 
-function testSolidify()
+
+"""
+$(SIGNATURES)
+"""
+function testSolidify!()
     println("Testing solidification")
     width = 100
     height = 100
     origMesh = squareMesh(width, height)
 
-    for y = 1: height
-        for x = 1: width
-            x2 = (x - width/2) / width
-            y2 = (y - height/2) / height
+    for y = 1:height
+        for x = 1:width
+            x2 = (x - width / 2) / width
+            y2 = (y - height / 2) / height
             value = x2 * x2 + y2 * y2
             origMesh.nodeArray[x, y].z = 15 - value * 25
         end
     end
 
-    saveObj(origMesh, "testSolidify.obj")
+    saveObj!(origMesh, "testSolidify.obj")
     solidMesh = solidify(origMesh, 0)
-    saveObj(solidMesh, "testSolidify2.obj")
+    saveObj!(solidMesh, "testSolidify2.obj")
 end
 
-function plotAsQuiver(g; stride=4, scale=300, max_length=2, flipxy=false, reversey=false, reversex=false)
+
+"""
+$(SIGNATURES)
+"""
+function plotAsQuiver(
+    g;
+    stride = 4,
+    scale = 300,
+    max_length = 2,
+    flipxy = false,
+    reversey = false,
+    reversex = false,
+)
     h, w = size(g)
     xs = Float64[]
     ys = Float64[]
     us = Float64[]
     vs = Float64[]
+
     for x = 1:stride:w
-        for y = 1:stride: h
-            if reversex
-                push!(xs, x)
-            else
-                push!(xs, -x)
-            end
-            
-            if reversey
-                push!(ys, -y)
-            else
-                push!(ys, y)
-            end
+        for y = 1:stride:h
+            reversex ? push!(xs, x) : push!(xs, -x)
+            reversey ? push!(ys, -y) : push!(ys, y)
 
             p1 = g[y, x]
             u = (g[y, x+1] - g[y, x]) * scale
@@ -867,29 +846,25 @@ function plotAsQuiver(g; stride=4, scale=300, max_length=2, flipxy=false, revers
             end
 
             # println(u, v)
-            if u >= 0
-                push!(us, min(u, max_length))
-            else
-                push!(us, max(u, -max_length))
-            end
+            u >= 0 ? push!(us, min(u, max_length)) : push!(us, max(u, -max_length))
+            v >= 0 ? push!(vs, min(v, max_length)) : push!(vs, max(v, -max_length))
 
-            if v >= 0
-                push!(vs, min(v, max_length))
-            else
-                push!(vs, max(v, -max_length))
-            end
         end
     end
-    if flipxy
-        q = quiver(ys, xs, quiver=(vs, us),aspect_ratio=:equal)
-    else
-        q = quiver(xs, ys, quiver=(us, vs),aspect_ratio=:equal)
-    end
+
+    q =
+        flipxy ? quiver(ys, xs, quiver = (vs, us), aspect_ratio = :equal) :
+        quiver(xs, ys, quiver = (us, vs), aspect_ratio = :equal)
+
     display(q)
     readline()
 end
 
-function plotVAsQuiver(vx, vy; stride=4, scale=300, max_length=2,)
+
+"""
+$(SIGNATURES)
+"""
+function plotVAsQuiver(vx, vy; stride = 4, scale = 300, max_length = 2)
     h, w = size(vx)
 
     xs = Float64[]
@@ -898,55 +873,51 @@ function plotVAsQuiver(vx, vy; stride=4, scale=300, max_length=2,)
     vs = Float64[]
 
     for x = 1:stride:w
-        for y = 1:stride: h
+        for y = 1:stride:h
             push!(xs, x)
             push!(ys, h - y)
 
-            u = vx[x, y]
-            v = vy[x, y]
-
-            if u == 0
-                u = 0.001
-            end
-            if v == 0
-                v = 0.001
-            end
+            u = max(vx[x, y], 0.001)
+            v = max(vy[x, y], 0.001)
 
             push!(us, u)
             push!(vs, v)
             # println(u, ": ", v)
-
         end
     end
+
     # readline()
-    q = quiver(xs, ys, quiver=(us, vs),aspect_ratio=:equal)
+    q = quiver(xs, ys, quiver = (us, vs), aspect_ratio = :equal)
     display(q)
     readline()
 end
 
-function main()
-    if size(ARGS) != (1,)
-        println("Intented usage is: julia create_mesh.jl image.png")
-        return
-    end
 
-    img = Gray.(load(ARGS[1]))
+
+"""
+$(SIGNATURES)
+"""
+function engineer_caustics(img)
+
+    img = Gray.(img)
     img2 = permutedims(img) * 1.0
     width, height = size(img2)
 
     # meshy is the same size as the image
     meshy = squareMesh(width + 1, height + 1)
+
     # We need to boost the brightness of the image so that its sum and the sum of the area are equal
     mesh_sum = width * height
     image_sum = sum(img2)
     boost_ratio = mesh_sum / image_sum
-    # img3 is 512x512
-    img3 = img2 .* boost_ratio    
-    
+
+    # img3 is grid_definitionxgrid_definition
+    img3 = img2 .* boost_ratio
+
     oneIteration(meshy, img3, "it1")
     oneIteration(meshy, img3, "it2")
     oneIteration(meshy, img3, "it3")
-    
+
     # oneIteration(meshy, img3, "it4")
     # oneIteration(meshy, img3, "it5")
     # oneIteration(meshy, img3, "it6")
@@ -959,10 +930,29 @@ function main()
     # newMesh = setHeights(meshy, h)
 
     solidMesh = solidify(meshy)
-    saveObj(solidMesh, "$(ARGS[1]).obj", scale=1/512.0 * artifactSize, scalez=1/512.0 * artifactSize)
-    meshy, img3
+    saveObj!(
+        solidMesh,
+        "$(ARGS[1]).obj",
+        scale = 1 / grid_definition * artifactSize,
+        scalez = 1 / 512.0 * artifactSize,
+    )
+
+    return meshy, img3
 end
 
 
-main()
+"""
+$(SIGNATURES)
+"""
+function main()
+    @assert size(ARGS) == (1,) "Intented usage is: julia create_mesh.jl image.png"
 
+    img = load(ARGS[1])
+    return engineer_caustics(img)
+end
+
+
+"""
+$(SIGNATURES)
+"""
+main()

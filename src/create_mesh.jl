@@ -177,9 +177,9 @@ function ∇(f::Matrix{Float64})
     ∇fᵤ = zeros(Float64, width, height)   # the right edge will be filled with zeros
     ∇fᵥ = zeros(Float64, width, height)   # the buttom edge will be filled with zeros
 
-    for x in 1:width, y in 1:height
-        ∇fᵤ[x, y] = (x == width ? 0 : f[x + 1, y] - f[x, y])
-        ∇fᵥ[x, y] = (y == height ? 0 : f[x, y + 1] - f[x, y])
+    @inbounds for y in 1:height, x in 1:width
+        ∇fᵤ[x, y] = (x == width ? 0.0 : f[x + 1, y] - f[x, y])
+        ∇fᵥ[x, y] = (y == height ? 0.0 : f[x, y + 1] - f[x, y])
     end
 
     return ∇fᵤ, ∇fᵥ
@@ -195,14 +195,13 @@ function getPixelArea(mesh::Mesh)
     # pixelAreas = Matrix{Float64}(undef, mesh.width - 1, mesh.height - 1)
     pixelAreas = zeros(mesh.width - 1, mesh.height - 1)
 
-    for x in 1:mesh.width - 1, y in 1:mesh.height - 1
-        upperLeft = mesh.nodeArray[x, y]
-        upperRight = mesh.nodeArray[x + 1, y]
-
-        lowerLeft = mesh.nodeArray[x, y + 1]
+    @inbounds for y in 1:mesh.height - 1, x in 1:mesh.width - 1
+        upperLeft  = mesh.nodeArray[x,     y    ]
+        upperRight = mesh.nodeArray[x + 1, y    ]
+        lowerLeft  = mesh.nodeArray[x,     y + 1]
         lowerRight = mesh.nodeArray[x + 1, y + 1]
 
-        #= 
+        #=
         *------*
         |    / |
         |   /  |
@@ -210,8 +209,8 @@ function getPixelArea(mesh::Mesh)
         | /    |
         *------* =#
         pixelAreas[x, y] =
-            triangle_area(lowerLeft, upperRight, upperLeft) +
-            triangle_area(lowerLeft, lowerRight, upperRight)
+            triangle_area_2d(lowerLeft, upperRight, upperLeft) +
+            triangle_area_2d(lowerLeft, lowerRight, upperRight)
     end
 
     return pixelAreas
@@ -222,131 +221,72 @@ end
 $(SIGNATURES)
 """
 function relax!(matrix::Matrix{Float64}, D::Matrix{Float64})
-    # This function implements successive over relaxation for a matrix and its associated error matrix
-    # There is a hardcoded assumption of Neumann boundary conditions--that the derivative across the
-    # boundary must be zero in all cases. See:
-    # https://math.stackexchange.com/questions/3790299/how-to-iteratively-solve-poissons-equation-with-no-boundary-conditions
-    # sz = size(matrix)
-    # width = sz[1]
-    # height = sz[2]
+    # Successive over-relaxation with Neumann boundary conditions (zero derivative at boundary).
+    # See: https://math.stackexchange.com/questions/3790299/how-to-iteratively-solve-poissons-equation-with-no-boundary-conditions
+    # Boundary cases are handled separately so the interior hot loop is branch-free.
     width, height = size(matrix)
-    # ω = 2 / (1 + π / width)
     ω = 1.99
-    # println("OMEGA $(ω)")
-    max_update = 0
-    for y = 1:height
-        for x = 1:width
-            val = matrix[x, y]
+    max_update = 0.0
 
-            if x == 1 && y == 1
-                # Top left corner
-                val_down = matrix[x, y + 1]
-                val_right = matrix[x + 1, y]
-                delta = ω / 2 * (val_down + val_right - 2 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif x == 1 && y == height
-                # Bottom left corner
-                val_up = matrix[x, y - 1]
-                val_right = matrix[x + 1, y]
-                delta = ω / 2 * (val_up + val_right - 2 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif x == width && y == 1
-                # Top right corner
-                val_down = matrix[x, y + 1]
-                val_left = matrix[x - 1, y]
-                delta = ω / 2 * (val_down + val_left - 2 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif x == width && y == height
-                # Bottom right corner
-                val_up = matrix[x, y - 1]
-                val_left = matrix[x - 1, y]
-                delta = ω / 2 * (val_up + val_left - 2 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
+    # Corners (2 neighbors each)
+    @inbounds begin
+        delta = ω / 2 * (matrix[1, 2] + matrix[2, 1] - 2matrix[1, 1] - D[1, 1])
+        abs(delta) > max_update && (max_update = abs(delta))
+        matrix[1, 1] += delta
 
-            elseif x == 1
-                # Along the left edge, but not the top or buttom corner
-                val_up = matrix[x, y - 1]
-                val_down = matrix[x, y + 1]
-                val_right = matrix[x + 1, y]
-                delta = ω / 3 * (val_up + val_down + val_right - 3 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif x == width
-                # Along the right edge, but not the top or buttom corner
-                val_up = matrix[x, y - 1]
-                val_down = matrix[x, y + 1]
-                val_left = matrix[x - 1, y]
-                delta = ω / 3 * (val_up + val_down + val_left - 3 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif y == 1
-                # Along the top edge, but not the left or right corner
-                val_down = matrix[x, y + 1]
-                val_left = matrix[x - 1, y]
-                val_right = matrix[x + 1, y]
-                delta = ω / 3 * (val_down + val_left + val_right - 3 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            elseif y == height
-                # Along the bottom edge, but not the left or right corner
-                val_up = matrix[x, y - 1]
-                val_left = matrix[x - 1, y]
-                val_right = matrix[x + 1, y]
-                delta = ω / 3 * (val_up + val_left + val_right - 3 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
-            else
-                # The normal case, in the middle of the mesh!
-                val_up = matrix[x, y - 1]
-                val_down = matrix[x, y + 1]
-                val_left = matrix[x - 1, y]
-                val_right = matrix[x + 1, y]
+        delta = ω / 2 * (matrix[1, height-1] + matrix[2, height] - 2matrix[1, height] - D[1, height])
+        abs(delta) > max_update && (max_update = abs(delta))
+        matrix[1, height] += delta
 
-                # The new way
-                # ∇x₁ =
+        delta = ω / 2 * (matrix[width, 2] + matrix[width-1, 1] - 2matrix[width, 1] - D[width, 1])
+        abs(delta) > max_update && (max_update = abs(delta))
+        matrix[width, 1] += delta
 
+        delta = ω / 2 * (matrix[width, height-1] + matrix[width-1, height] - 2matrix[width, height] - D[width, height])
+        abs(delta) > max_update && (max_update = abs(delta))
+        matrix[width, height] += delta
+    end
 
-                # The old way
-                delta = ω / 4 * (val_up + val_down + val_left + val_right - 4 * val - D[x, y])
-                if abs(delta) > max_update
-                    max_update = abs(delta)
-                end
-                matrix[x, y] += delta
+    # Left edge x=1, y=2..height-1 (3 neighbors)
+    @inbounds for y = 2:height-1
+        delta = ω / 3 * (matrix[1, y-1] + matrix[1, y+1] + matrix[2, y] - 3matrix[1, y] - D[1, y])
+        abs(delta) > max_update && (max_update = abs(delta))
+        matrix[1, y] += delta
+    end
+
+    # Right edge x=width, y=2..height-1 (3 neighbors)
+    @inbounds for y = 2:height-1
+        delta = ω / 3 * (matrix[width, y-1] + matrix[width, y+1] + matrix[width-1, y] - 3matrix[width, y] - D[width, y])
+        abs(delta) > max_update && (max_update = abs(delta))
+        matrix[width, y] += delta
+    end
+
+    # Top edge y=1, x=2..width-1 (3 neighbors)
+    @inbounds for x = 2:width-1
+        delta = ω / 3 * (matrix[x, 2] + matrix[x-1, 1] + matrix[x+1, 1] - 3matrix[x, 1] - D[x, 1])
+        abs(delta) > max_update && (max_update = abs(delta))
+        matrix[x, 1] += delta
+    end
+
+    # Bottom edge y=height, x=2..width-1 (3 neighbors)
+    @inbounds for x = 2:width-1
+        delta = ω / 3 * (matrix[x, height-1] + matrix[x-1, height] + matrix[x+1, height] - 3matrix[x, height] - D[x, height])
+        abs(delta) > max_update && (max_update = abs(delta))
+        matrix[x, height] += delta
+    end
+
+    # Interior: branch-free inner loop (4 neighbors)
+    @inbounds for y = 2:height-1
+        for x = 2:width-1
+            delta = ω / 4 * (matrix[x, y-1] + matrix[x, y+1] + matrix[x-1, y] + matrix[x+1, y] - 4matrix[x, y] - D[x, y])
+            if abs(delta) > max_update
+                max_update = abs(delta)
             end
-            # node.z = .25 * (node_up.z + node_down.z + node_left.z + node_right.z) # simple averaging
-            # node.z += ω/4 * (node_up.z + node_down.z + node_left.z + node_right.z - 4 * node.z)
-
-            # matrix[x, y] += ω/4 * (val_up + val_down + val_left + val_right - 4 * val - D[x, y])
+            matrix[x, y] += delta
         end
     end
 
-    max_update
-
-    # for y = 1:height
-    #     for x = 1:width
-    #         val = matrix[x, y]
-    #     end
-    # end
+    return max_update
 end
 
 
@@ -377,62 +317,43 @@ $(SIGNATURES)
 function marchMesh!(mesh::Mesh, ϕ::Matrix{Float64})
     ∇ϕᵤ, ∇ϕᵥ = ∇(ϕ)
 
-    imgWidth, imgHeight = size(ϕ)   # should be grid_definitionxgrid_definition
+    # Use two Float64 matrices instead of Matrix{Point3D} — avoids heap allocation
+    # of width*height mutable structs and gives cache-friendly access patterns.
+    vel_u = zeros(Float64, mesh.width, mesh.height)
+    vel_v = zeros(Float64, mesh.width, mesh.height)
 
-    # For each point in the mesh we need to figure out its velocity
-    velocities = Matrix{Point3D}(undef, mesh.width, mesh.height)
-    for x in 1:mesh.width, y in 1:mesh.height
-        # XY coordinates in the mesh ARE XY coordinates in the image. The mesh just needs an extra row and column
-        # at the bottom right edge so that the triangles can be closed
-
-        if x == mesh.width
-            u = 0
-        else
-            u = (y == mesh.height ? ∇ϕᵤ[x, y - 1] : ∇ϕᵤ[x, y])
-        end
-
-        if y == mesh.height
-            v = 0
-        else
-            v = (x == mesh.width ? ∇ϕᵥ[x - 1, y] : ∇ϕᵥ[x, y])
-        end
-
-        velocities[x, y] = Point3D(-u, -v, 0, 0, 0)
+    @inbounds for y in 1:mesh.height, x in 1:mesh.width
+        u = (x == mesh.width) ? 0.0 :
+            (y == mesh.height ? ∇ϕᵤ[x, y - 1] : ∇ϕᵤ[x, y])
+        v = (y == mesh.height) ? 0.0 :
+            (x == mesh.width ? ∇ϕᵥ[x - 1, y] : ∇ϕᵥ[x, y])
+        vel_u[x, y] = -u
+        vel_v[x, y] = -v
     end
 
-    min_t = 10000
-    triangleCount = 1
-    for triangle in mesh.triangles
+    min_t = 10000.0
+    @inbounds for triangle in mesh.triangles
         p1 = mesh.nodes[triangle.pt1]
         p2 = mesh.nodes[triangle.pt2]
         p3 = mesh.nodes[triangle.pt3]
 
-        v1 = velocities[p1.ix, p1.iy]
-        v2 = velocities[p2.ix, p2.iy]
-        v3 = velocities[p3.ix, p3.iy]
+        v1 = Point3D(vel_u[p1.ix, p1.iy], vel_v[p1.ix, p1.iy], 0.0, 0, 0)
+        v2 = Point3D(vel_u[p2.ix, p2.iy], vel_v[p2.ix, p2.iy], 0.0, 0, 0)
+        v3 = Point3D(vel_u[p3.ix, p3.iy], vel_v[p3.ix, p3.iy], 0.0, 0, 0)
 
         t1, t2 = findT(p1, p2, p3, v1, v2, v3)
 
-        if 0 < t1 < min_t
-            min_t = t1
-        end
-
-        if 0 < t2 < min_t
-            min_t = t2
-        end
-        triangleCount += 1
+        0 < t1 < min_t && (min_t = t1)
+        0 < t2 < min_t && (min_t = t2)
     end
 
     println("Overall min_t:", min_t)
     δ = min_t / 2
 
-    for point in mesh.nodes
-        v = velocities[point.ix, point.iy]
-        point.x = v.x * δ + point.x
-        point.y = v.y * δ + point.y
+    @inbounds for point in mesh.nodes
+        point.x += vel_u[point.ix, point.iy] * δ
+        point.y += vel_v[point.ix, point.iy] * δ
     end
-
-    # saveObj(mesh, "gateau.obj")
 end
 
 
@@ -469,7 +390,8 @@ function oneIteration(meshy, img, suffix)
     LJ = getPixelArea(meshy)
     D = Float64.(LJ - img)
     # Shift D to ensure its sum is zero
-    D .-= sum(D) / (512 * 512)
+    width, height = size(img)
+    D .-= sum(D) / (width * height)
 
     # Save the loss image as a png
     println(minimum(D))
@@ -714,38 +636,29 @@ function findSurface(mesh, image, f, imgWidth)
     # η = 1.49
     n₂ = 1
     n₁ = 1.49
+    inv_n1m1 = 1.0 / (n₁ - 1)   # precompute: avoids division inside hot loop
     Nx = zeros(width + 1, height + 1)
     Ny = zeros(width + 1, height + 1)
 
-    for j = 1:height
+    @inbounds for j = 1:height
         for i = 1:width
             node = mesh.nodeArray[i, j]
             dx = (node.ix - node.x) * metersPerPixel
             dy = (node.iy - node.y) * metersPerPixel
 
-            little_h = node.z * metersPerPixel
-            H_minus_h = H - little_h
-            dz = H_minus_h
+            dz = H - node.z * metersPerPixel
 
-
-            # k = η * sqrt(dx * dx + dy * dy + H_minus_h * H_minus_h) - H_minus_h
-            # Nx[i, j] = 1/k * dx
-            # Ny[i, j] = 1/k * dy
-            Ny[i, j] = tan(atan(dy / dz) / (n₁ - 1))
-            Nx[i, j] = tan(atan(dx / dz) / (n₁ - 1))
-
-
+            Nx[i, j] = tan(atan(dx / dz) * inv_n1m1)
+            Ny[i, j] = tan(atan(dy / dz) * inv_n1m1)
         end
     end
 
     divergence = zeros(width, height)
     # We need to find the divergence of the Vector field described by Nx and Ny
 
-    for j = 1:height
+    @inbounds for j = 1:height
         for i = 1:width
-            δx = (Nx[i + 1, j] - Nx[i, j])
-            δy = (Ny[i, j + 1] - Ny[i, j])
-            divergence[i, j] = δx + δy
+            divergence[i, j] = (Nx[i + 1, j] - Nx[i, j]) + (Ny[i, j + 1] - Ny[i, j])
         end
     end
     println("Have all the divergences")

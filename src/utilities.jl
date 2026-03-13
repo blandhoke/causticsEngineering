@@ -94,3 +94,13 @@ function triangle_area(p1::Point3D, p2::Point3D, p3::Point3D)
 
     return sqrt(s * (s - a) * (s - b) * (s - c))
 end
+
+
+"""
+$(SIGNATURES)
+
+Fast 2D triangle area via cross product. No `sqrt` required; valid when z is irrelevant (xy-plane projection).
+"""
+@inline function triangle_area_2d(p1::Point3D, p2::Point3D, p3::Point3D)
+    return 0.5 * abs((p2.x - p1.x) * (p3.y - p1.y) - (p3.x - p1.x) * (p2.y - p1.y))
+end

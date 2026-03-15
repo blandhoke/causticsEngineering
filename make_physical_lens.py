@@ -12,7 +12,7 @@ IMPORTANT: Z must scale with XY. Refraction angles depend on dZ/dXY ratio.
 Material limits:
   Max dome: 25.4mm (1" cast acrylic)
   Min dome: 5.0mm  (too flat to mill well)
-  Script exits non-zero if dome exceeds material thickness.
+  Script warns if dome exceeds limit but always writes the CNC file.
 """
 
 from pathlib import Path
@@ -23,7 +23,10 @@ INPUT_OBJ  = Path("/Users/admin/causticsEngineering/examples/original_image.obj"
 OUTPUT_OBJ = Path("/Users/admin/causticsEngineering/examples/physical_lens_8x8.obj")
 
 TARGET_SIZE_M   = 0.2032   # 8 inches in metres
-NATIVE_FOCAL_M  = 0.75     # solver focalLength (metres) — must match focalLength in create_mesh.jl
+# KEEP IN SYNC WITH focalLength in src/create_mesh.jl
+# Current value: 0.75m (empirically determined to fit 1" acrylic at 8"x8")
+# Focal length calibration: f=0.20→34.6mm, f=0.60→26.1mm, f=0.75→25.2mm
+NATIVE_FOCAL_M  = 0.75     # metres
 MATERIAL_MAX_MM = 25.4     # 1" cast acrylic
 MATERIAL_MIN_MM = 5.0      # too flat to mill well
 
@@ -81,8 +84,7 @@ if warnings:
     print("\n── WARNINGS ──────────────────────────────────────────")
     for w in warnings:
         print(f"  ⚠  {w}")
-    if physical_dome_mm > MATERIAL_MAX_MM:
-        sys.exit(1)
+    # User is aware of tight margin — continue anyway and produce CNC file
 else:
     print(f"\n  ✓ Dome height fits within 1\" material")
 

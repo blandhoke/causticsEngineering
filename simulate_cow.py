@@ -17,17 +17,25 @@ from pathlib import Path
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE        = Path("/Users/admin/causticsEngineering/examples")
 OBJ_PATH    = BASE / "original_image.obj"
-OUTPUT_PATH = BASE / "caustic_cow_v2.png"
+OUTPUT_PATH = BASE / "caustic_cow_v3.png"
 ACCUM_PATH  = BASE / "cow_accum.npy"
 META_PATH   = BASE / "cow_meta.npy"
 
 # Guard: never silently overwrite the reference render
 assert OUTPUT_PATH.name != "caustic_simulated.png", "Refusing to overwrite reference render"
 
-IOR        = 1.49      # acrylic / PMMA
-FOCAL_DIST = 0.2       # metres
-IMAGE_RES  = 1024      # square pixels
-BATCH_SIZE = 100_000   # faces per batch
+IOR          = 1.49      # acrylic / PMMA
+FOCAL_DIST   = 0.2       # metres
+IMAGE_RES    = 1024      # square pixels
+BATCH_SIZE   = 100_000   # faces per batch
+N_PASSES     = 4         # jittered barycentric supersampling passes
+SPLAT_SIGMA  = 1.5       # Gaussian splat sigma (pixels)
+SPLAT_RADIUS = 3         # Gaussian splat half-width (pixels)
+
+# Precompute Gaussian kernel weights once
+_ks     = range(-SPLAT_RADIUS, SPLAT_RADIUS + 1)
+_kernel = {(dy, dx): np.exp(-(dx**2 + dy**2) / (2 * SPLAT_SIGMA**2))
+           for dy in _ks for dx in _ks}
 
 # ── Warm sunlight colormap: black → amber → golden yellow → near-white ─────────
 CMAP = LinearSegmentedColormap.from_list('sunlight', [
@@ -90,9 +98,10 @@ else:
     ymin, ymax = cy - pad, cy + pad
     accum = np.zeros((IMAGE_RES, IMAGE_RES), dtype=np.float64)
 
-    print("\nTracing rays...")
+    print(f"\nTracing rays  ({N_PASSES} passes, Gaussian splat r={SPLAT_RADIUS})...")
     n_hit_total = 0
-    total = len(top_idx)
+    total       = len(top_idx)
+    np.random.seed(42)   # reproducible jitter
 
     for start in range(0, total, BATCH_SIZE):
         batch = top_idx[start : start + BATCH_SIZE]
@@ -100,45 +109,66 @@ else:
         b1 = verts[faces[batch, 1]]
         b2 = verts[faces[batch, 2]]
 
-        cents = (b0 + b1 + b2) / 3.0
+        # Geometry fixed per batch — compute once, reuse across passes
         raw_n = np.cross(b1 - b0, b2 - b0)
         mag_n = np.linalg.norm(raw_n, axis=1, keepdims=True)
         ns    = raw_n / np.where(mag_n > 0, mag_n, 1.0)
         areas = mag_n[:, 0] * 0.5
 
-        d_in  = cents - light_pos[None, :]
-        r2    = np.sum(d_in**2, axis=1)
-        d_in /= np.linalg.norm(d_in, axis=1, keepdims=True)
+        for pass_i in range(N_PASSES):
+            # ── Step 2: jittered barycentric sample point ──────────────────
+            ra  = np.random.rand(len(batch))
+            rb  = np.random.rand(len(batch))
+            fold = ra + rb > 1
+            ra[fold] = 1 - ra[fold]
+            rb[fold] = 1 - rb[fold]
+            cents = ra[:,None]*b0 + rb[:,None]*b1 + (1-ra-rb)[:,None]*b2
 
-        d_glass, valid = refract_batch(d_in, ns, n_ratio=1.0 / IOR)
+            d_in = cents - light_pos[None, :]
+            r2   = np.sum(d_in**2, axis=1)
+            d_in /= np.linalg.norm(d_in, axis=1, keepdims=True)
 
-        dz_g   = d_glass[:, 2]
-        t_bot  = np.where(dz_g < -1e-12, (lens_bottom_z - cents[:, 2]) / dz_g, -1.0)
-        valid &= t_bot > 0
-        exit_p = cents + t_bot[:, None] * d_glass
+            d_glass, valid = refract_batch(d_in, ns, n_ratio=1.0 / IOR)
 
-        n_bot          = np.zeros_like(exit_p); n_bot[:, 2] = 1.0
-        d_exit, valid2 = refract_batch(d_glass, n_bot, n_ratio=IOR / 1.0)
-        valid &= valid2
+            # ── Step 1: cosine weighting ───────────────────────────────────
+            cos_i = np.einsum('ij,ij->i', -d_in, ns).clip(0, 1)
 
-        dz_e   = d_exit[:, 2]
-        t_pln  = np.where(np.abs(dz_e) > 1e-12, (plane_z - exit_p[:, 2]) / dz_e, -1.0)
-        valid &= t_pln > 0
-        hits   = exit_p + t_pln[:, None] * d_exit
+            dz_g   = d_glass[:, 2]
+            t_bot  = np.where(dz_g < -1e-12, (lens_bottom_z - cents[:, 2]) / dz_g, -1.0)
+            valid &= t_bot > 0
+            exit_p = cents + t_bot[:, None] * d_glass
 
-        hx = hits[valid, 0];  hy = hits[valid, 1]
-        w  = areas[valid] / np.where(r2[valid] > 0, r2[valid], 1.0)
-        px = ((hx - xmin) / (xmax - xmin) * IMAGE_RES).astype(np.int32)
-        py = ((hy - ymin) / (ymax - ymin) * IMAGE_RES).astype(np.int32)
-        ok = (px >= 0) & (px < IMAGE_RES) & (py >= 0) & (py < IMAGE_RES)
-        np.add.at(accum, (py[ok], px[ok]), w[ok])
-        n_hit_total += int(ok.sum())
+            n_bot          = np.zeros_like(exit_p); n_bot[:, 2] = 1.0
+            d_exit, valid2 = refract_batch(d_glass, n_bot, n_ratio=IOR / 1.0)
+            valid &= valid2
+
+            dz_e   = d_exit[:, 2]
+            t_pln  = np.where(np.abs(dz_e) > 1e-12, (plane_z - exit_p[:, 2]) / dz_e, -1.0)
+            valid &= t_pln > 0
+            hits   = exit_p + t_pln[:, None] * d_exit
+
+            hx = hits[valid, 0];  hy = hits[valid, 1]
+            w  = areas[valid] * cos_i[valid] / np.where(r2[valid] > 0, r2[valid], 1.0)
+            px = ((hx - xmin) / (xmax - xmin) * IMAGE_RES).astype(np.int32)
+            py = ((hy - ymin) / (ymax - ymin) * IMAGE_RES).astype(np.int32)
+            ok = (px >= 0) & (px < IMAGE_RES) & (py >= 0) & (py < IMAGE_RES)
+
+            # ── Step 3: Gaussian splat ─────────────────────────────────────
+            for dy in range(-SPLAT_RADIUS, SPLAT_RADIUS + 1):
+                for dx in range(-SPLAT_RADIUS, SPLAT_RADIUS + 1):
+                    g   = _kernel[(dy, dx)]
+                    pxc = (px[ok] + dx).clip(0, IMAGE_RES - 1)
+                    pyc = (py[ok] + dy).clip(0, IMAGE_RES - 1)
+                    np.add.at(accum, (pyc, pxc), w[ok] * g)
+
+            n_hit_total += int(ok.sum())
 
         print(f"  {min(start+BATCH_SIZE, total):>7,} / {total:,}  "
               f"({100*(start+BATCH_SIZE)/total:.0f}%)", end='\r')
 
-    hit_rate = 100 * n_hit_total / total if total > 0 else 0
-    print(f"\n  Hits on plane: {n_hit_total:,}  ({hit_rate:.1f}% hit rate)")
+    accum /= N_PASSES   # energy conservation across passes
+    hit_rate = 100 * n_hit_total / (total * N_PASSES) if total > 0 else 0
+    print(f"\n  Hits on plane: {n_hit_total:,}  ({hit_rate:.1f}% hit rate across {N_PASSES} passes)")
 
     np.save(ACCUM_PATH, accum)
     np.save(META_PATH,  np.array([xmin, xmax, ymin, ymax]))
@@ -150,6 +180,14 @@ img = np.fliplr(accum.copy())   # correct horizontal mirror
 if img.max() > 0:
     img /= img.max()
 img = np.sqrt(img)   # gamma ≈ 2
+
+# ── Step 4: light post-process smooth ─────────────────────────────────────────
+try:
+    from scipy.ndimage import gaussian_filter
+    img = gaussian_filter(img, sigma=0.5)
+    print("Applied post-process Gaussian smooth (sigma=0.5)")
+except ImportError:
+    print("scipy not available — skipping post-process smooth")
 
 fig, ax = plt.subplots(figsize=(10, 10), facecolor='black')
 ax.imshow(img, cmap=CMAP, origin='upper',

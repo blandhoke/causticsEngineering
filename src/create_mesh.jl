@@ -875,7 +875,7 @@ function engineer_caustics(img)
     oneIteration(meshy, img3, "it6")
 
     artifactSize = 0.1  # meters
-    focalLength = 0.2 # meters
+    focalLength = 0.75 # meters  (optimized for 1" acrylic at 8"x8"; targets ~24mm dome, throw ~30")
     h, metersPerPixel = findSurface(meshy, img3, focalLength, artifactSize)
 
     setHeights!(meshy, h, 1.0, 10)

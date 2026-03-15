@@ -1,0 +1,15 @@
+/Users/admin/causticsEngineering/simulate_befuddled.py:146: RuntimeWarning: divide by zero encountered in divide
+  t_pln  = np.where(np.abs(dz_e) > 1e-12, (plane_z - exit_p[:, 2]) / dz_e, -1.0)
+Parsing OBJ...
+  2,101,250 vertices  |  4,202,496 faces
+  Lens Z: -0.01953 → 0.00529  |  span 0.2000 m  |  dome height 0.02482 m
+  Light: [0.10018984 0.10019531 0.20529342]  |  Plane z: -0.21953
+  Top-surface faces: 2,100,744
+
+Tracing rays  (4 passes, Gaussian splat r=3)...
+  100,000 / 2,100,744  (5%)  200,000 / 2,100,744  (10%)  300,000 / 2,100,744  (14%)  400,000 / 2,100,744  (19%)  500,000 / 2,100,744  (24%)  600,000 / 2,100,744  (29%)  700,000 / 2,100,744  (33%)  800,000 / 2,100,744  (38%)  900,000 / 2,100,744  (43%)  1,000,000 / 2,100,744  (48%)  1,100,000 / 2,100,744  (52%)  1,200,000 / 2,100,744  (57%)  1,300,000 / 2,100,744  (62%)  1,400,000 / 2,100,744  (67%)  1,500,000 / 2,100,744  (71%)  1,600,000 / 2,100,744  (76%)  1,700,000 / 2,100,744  (81%)  1,800,000 / 2,100,744  (86%)  1,900,000 / 2,100,744  (90%)  2,000,000 / 2,100,744  (95%)  2,100,000 / 2,100,744  (100%)  2,100,744 / 2,100,744  (105%)
+  Hits on plane: 8,389,172  (99.8% hit rate across 4 passes)
+Saved cache → befuddled_v4_accum.npy
+Rendering image...
+Applied post-process Gaussian smooth (sigma=0.5)
+Done → /Users/admin/causticsEngineering/examples/caustic_befuddled_v4.png

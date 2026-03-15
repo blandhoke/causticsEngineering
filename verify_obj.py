@@ -31,7 +31,8 @@ dome_mm    = (z_max - z_min) * 1000
 
 print(f"\n  XY span:       {xy_span_m*1000:.2f} mm  ({xy_span_m:.5f} m)")
 print(f"  Z range:       {z_min*1000:.3f} mm → {z_max*1000:.3f} mm")
-print(f"  Dome height:   {dome_mm:.2f} mm  ({'✓ fits in 1\" acrylic' if dome_mm < 25.4 else '⚠ EXCEEDS 1\" ACRYLIC THICKNESS'})")
+dome_status = '✓ fits in 1" acrylic' if dome_mm < 25.4 else '⚠ EXCEEDS 1" ACRYLIC THICKNESS'
+print(f"  Dome height:   {dome_mm:.2f} mm  ({dome_status})")
 
 v0 = verts[faces[:,0]]; v1 = verts[faces[:,1]]; v2 = verts[faces[:,2]]
 raw_n     = np.cross(v1 - v0, v2 - v0)

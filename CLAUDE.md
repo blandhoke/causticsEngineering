@@ -1,68 +1,125 @@
-# CLAUDE.md
+# CLAUDE.md — CausticsEngineering
+# Auto-accept all edits unless flagged CONFIRM REQUIRED.
+# Do not ask permission for file writes, script runs, or plot regeneration.
+# Ask only before: deleting cached .npy files, modifying Julia source, or
+# running the full ray trace simulation from scratch (slow).
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## What This Project Is
+Julia-based caustic lens design pipeline. The Julia solver takes a target image
+and outputs a 3D mesh (OBJ) of a refractive acrylic lens surface. When light
+passes through the physical CNC-milled lens, it projects the target image as a
+caustic pattern on a surface below.
 
-## Project Overview
+Collaborator Leslie King runs a separate pipeline (ShapeFromCaustics/ma.py).
+Her README, parameters, and black-background rules apply ONLY to her process.
+Do not apply her settings to this project.
 
-CausticsEngineering is a Julia package that generates 3D printable surface meshes designed to project specific caustic images when illuminated. It implements the algorithm from ["Poisson-Based Continuous Surface Generation for Goal-Based Caustics"](https://www.researchgate.net/profile/Yonghao_Yue/publication/274483217_Poisson-Based_Continuous_Surface_Generation_for_Goal-Based_Caustics/).
+## Directory Layout
+/Users/admin/causticsEngineering/
+  run.jl                      <- Julia entry point. Edit target image path here.
+  src/
+    CausticsEngineering.jl    <- Module definition
+    create_mesh.jl            <- Core solver. focalLength=0.2 hardcoded line 878.
+    utilities.jl
+  examples/
+    original_image.obj        <- Water drop lens mesh (first test)
+    cow render.jpg            <- Current target image (note: space in filename)
+    caustic_simulated.png     <- Water drop forward ray trace (reference, DO NOT OVERWRITE)
+    caustic_cow.png           <- Cow caustic v1 (upside down — ignore)
+    caustic_cow_v2.png        <- Cow caustic v2 (corrected orientation — current best)
+    cow_accum.npy             <- Cached ray hit accumulator for cow (DO NOT DELETE)
+    cow_meta.npy              <- Cached bounds metadata for cow (DO NOT DELETE)
+  simulate_caustic.py         <- Water drop forward ray trace script
+  simulate_cow.py             <- Cow forward ray trace script (use cow_accum.npy cache)
+  render_caustics.py          <- Blender/Cycles script (outdated, do not use)
+  render_caustics_bdpt.py     <- LuxCore BDPT attempt (incomplete)
+  CAUSTICS_CONTEXT.md         <- Full Blender MCP session notes (reference)
+  CLAUDE.md                   <- This file
 
-## Commands
+## Key Physical Parameters (Julia solver)
+  focalLength = 0.2m          <- hardcoded in create_mesh.jl line 878
+  IOR = 1.49                  <- acrylic/PMMA
+  Light model: point source at focalLength above lens top face
+  Lens size: ~0.1m x 0.1m
+  CNC machine: Blue Elephant 1325, NK105 controller
 
-**Run the main pipeline:**
-```bash
-julia run.jl
-```
+## Confirmed Working: Forward Ray Trace Pipeline
+The Python forward ray trace is the ground truth verification method.
+DO NOT use Blender Cycles or LuxCore for pattern verification — neither converges.
 
-**Run tests:**
-```bash
-julia -e 'using Pkg; Pkg.test()'
-```
+simulate_cow.py workflow:
+  - Loads examples/original_image.obj (or any OBJ)
+  - Traces rays through mesh via Snell's law (IOR=1.49, focalLength=0.2)
+  - Caches results to cow_accum.npy + cow_meta.npy
+  - Replot only: just re-run script, it loads cache automatically
+  - Output: caustic_cow_v2.png
 
-**Build documentation:**
-```bash
-julia docs/make.jl
-```
+To replot without re-simulating: run simulate_cow.py as-is (cache auto-loads).
+To force re-simulation: delete cow_accum.npy and cow_meta.npy first (CONFIRM REQUIRED).
 
-**Format code:**
-```bash
-julia --eval "using JuliaFormatter; format(@__DIR__)"
-```
+## Blender OBJ Import (confirmed fix — do not change)
+  bpy.ops.wm.obj_import(filepath=OBJ_PATH, forward_axis='Y', up_axis='Z')
+Blender version: 4.3.2
+Blender 4.3 caustic API:
+  light.cycles.is_caustics_light = True
+  lens.cycles.is_caustics_caster = True
+  plane.cycles.is_caustics_receiver = True
 
-**Interactive development:** Use `src/scratchpad.jl` line-by-line in a Julia REPL.
+## LuxCore Status
+Installed on disk, pyluxcore binary not downloaded.
+To activate: Blender UI -> Edit -> Preferences -> Extensions -> BlendLuxCore -> Enable.
+This is a manual one-time click — cannot be scripted. Low priority for now.
 
-## Architecture
+## Current Problem: Caustic Geometry Mismatch
+caustic_cow_v2.png shows the cow is recognizable but with wrong tonality.
+Bright energy concentrates at edges/outlines rather than bright image areas.
+The caustic looks like an edge-detected version of the original.
 
-### Core Pipeline (`src/create_mesh.jl`, ~960 lines)
+Suspected causes (investigate in this order):
+  1. Target image not preprocessed for caustic input — photographic portraits
+     have complex mid-tone gradients the solver encodes as surface curvature,
+     producing edge-enhancement rather than brightness matching.
+  2. Solver encodes gradients not absolute brightness — physically inherent,
+     may need high-contrast near-binary input image to get clean output.
+  3. Quantitative analysis not yet done — run SSIM comparison, edge map
+     overlay, and inverted-original comparison before drawing conclusions.
 
-The algorithm runs in `engineer_caustics()` and proceeds as follows:
+## Next Tasks (do these in order, no permission needed)
+1. Run quantitative comparison between cow_render.jpg and caustic_cow_v2.png:
+   - SSIM score after normalizing to same size/grayscale
+   - Side-by-side: caustic vs contrast-inverted original
+   - Edge map of original overlaid on caustic
+   - Save as examples/comparison_analysis.png
 
-1. **Input**: Grayscale image normalized so total brightness matches mesh area
-2. **Iterative mesh deformation** (4 iterations via `oneIteration()`):
-   - `getPixelArea()` — computes area of each mesh cell using triangle areas
-   - Loss = difference between mesh pixel areas and target image brightness
-   - `relax!()` — Successive Over-Relaxation (SOR) solver for Poisson's equation with Neumann boundary conditions (ω = 1.99)
-   - `marchMesh!()` — deforms mesh along gradient of the solved potential field, finding triangle collision times via `findT()`
-3. **Surface height computation** (`findSurface()`): applies refraction physics (n₁=1.49, n₂=1) to determine actual 3D heights from the deformed mesh
-4. **Solidification** (`solidify()`): duplicates mesh as top surface, adds flat bottom, connects sides to create a watertight solid
-5. **Output**: OBJ file at specified physical scale
+2. Test with a simpler high-contrast target image:
+   - Bold shape, dark background, bright subject, no photographic gradients
+   - Place in examples/ and update run.jl to point to it
+   - Run julia run.jl to generate new OBJ
+   - Run forward ray trace, save as caustic_simple_test.png
 
-### Data Structures (`src/utilities.jl`)
+3. If geometry mismatch persists after simple image test:
+   - Investigate create_mesh.jl for image preprocessing assumptions
+   - Check if solver expects inverted image (dark=bright caustic)
+   - Check artifactSize parameter effect on output quality
 
-- `Point3D` — mutable struct: 3D coordinates (x, y, z) + grid indices (ix, iy)
-- `Triangle` — immutable: three point indices into a nodes array
-- `Mesh` — immutable: nodes vector, nodeArray (2D grid), triangles, width/height
+## Running the Julia Solver
+  cd /Users/admin/causticsEngineering
+  julia run.jl
+  Output: examples/original_image.obj (overwrites — rename first if needed)
 
-### Module Entry (`src/CausticsEngineering.jl`)
+## Python Dependencies
+  pip install numpy scipy matplotlib torch tqdm scikit-learn pillow trimesh scikit-image
 
-Imports `DocStringExtensions`, `Images`, `Plots` (GR backend); includes utilities.jl and create_mesh.jl; exports `main` and `engineer_caustics`.
+## DO NOT (ever, without explicit user instruction)
+- Delete opt_weights.npy (Leslie's pipeline — not even in this directory)
+- Overwrite caustic_simulated.png (reference render)
+- Overwrite cow_accum.npy or cow_meta.npy without CONFIRM REQUIRED flag
+- Modify create_mesh.jl or utilities.jl without flagging it first
+- Use Cycles for caustic verification
+- Apply Leslie's pipeline parameters to this project
 
-### OBJ I/O
-
-- `Obj2Mesh()` — parses OBJ format into Mesh struct
-- `saveObj!()` — writes Mesh to OBJ with optional scaling
-
-## Key Notes
-
-- The test suite (`test/runtests.jl`) is a skeleton with no implemented tests
-- Generated `.obj` files are gitignored
-- Julia compatibility: v1+; lockfile targets Julia 1.11.5
+## Claude Chat / Blender MCP
+Claude Chat (browser) has live Blender MCP access for scene inspection.
+Use Claude Chat for: viewport screenshots, material tweaks, geometry debugging.
+Use Claude Code (here) for: everything else.
+Handoff file: CAUSTICS_CONTEXT.md

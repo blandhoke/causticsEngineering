@@ -383,12 +383,51 @@ end
 
 """
 $(SIGNATURES)
+
+For each mesh cell, sample `img` at the centroid of the *deformed* cell via bilinear
+interpolation. This is the Damberg & Heidrich (2015) RHS correction: rather than comparing
+pixel areas against the fixed target grid, we pull the target back through the current
+mapping so the Poisson solver accounts for accumulated geometric distortion.
+"""
+function warpTarget(mesh::Mesh, img::Matrix)
+    imgWidth, imgHeight = size(img)
+    warped = zeros(Float64, mesh.width - 1, mesh.height - 1)
+
+    @inbounds for y in 1:mesh.height - 1, x in 1:mesh.width - 1
+        ul = mesh.nodeArray[x,     y    ]
+        ur = mesh.nodeArray[x + 1, y    ]
+        ll = mesh.nodeArray[x,     y + 1]
+        lr = mesh.nodeArray[x + 1, y + 1]
+
+        # Centroid of the deformed cell in image coordinates
+        cx = clamp((ul.x + ur.x + ll.x + lr.x) / 4, 1.0, Float64(imgWidth))
+        cy = clamp((ul.y + ur.y + ll.y + lr.y) / 4, 1.0, Float64(imgHeight))
+
+        # Bilinear interpolation
+        xi  = floor(Int, cx);  xi1 = min(xi + 1, imgWidth)
+        yi  = floor(Int, cy);  yi1 = min(yi + 1, imgHeight)
+        fx  = cx - xi;         fy  = cy - yi
+
+        warped[x, y] = (1 - fx) * (1 - fy) * Float64(img[xi,  yi ]) +
+                            fx  * (1 - fy) * Float64(img[xi1, yi ]) +
+                       (1 - fx) *      fy  * Float64(img[xi,  yi1]) +
+                            fx  *      fy  * Float64(img[xi1, yi1])
+    end
+
+    return warped
+end
+
+
+"""
+$(SIGNATURES)
 """
 function oneIteration(meshy, img, suffix)
     # Remember meshy is (will be) `grid_definition x grid_definition` just like the image
     # `grid_definition x grid_definition`, so LJ is `grid_definition x grid_definition`.
     LJ = getPixelArea(meshy)
-    D = Float64.(LJ - img)
+    # Pull target back through the current mapping (Damberg & Heidrich 2015)
+    warpedImg = warpTarget(meshy, img)
+    D = Float64.(LJ - warpedImg)
     # Shift D to ensure its sum is zero
     width, height = size(img)
     D .-= sum(D) / (width * height)
@@ -832,8 +871,8 @@ function engineer_caustics(img)
     oneIteration(meshy, img3, "it2")
     oneIteration(meshy, img3, "it3")
     oneIteration(meshy, img3, "it4")
-    # oneIteration(meshy, img3, "it5")
-    # oneIteration(meshy, img3, "it6")
+    oneIteration(meshy, img3, "it5")
+    oneIteration(meshy, img3, "it6")
 
     artifactSize = 0.1  # meters
     focalLength = 0.2 # meters

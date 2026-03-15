@@ -1,0 +1,20 @@
+── Physical Lens Scaler ──────────────────────────────
+  Input:          original_image.obj
+  Output:         physical_lens_8x8.obj
+  Scale factor:   2.0320x  (all axes)
+  Physical throw: 406.4 mm  (16.0")
+
+Parsing OBJ...
+
+── Native mesh ───────────────────────────────────────
+  Vertices:       2,101,250
+  XY span:        200.01 mm
+  Dome height:    34.04 mm
+
+── Scaled (physical) ─────────────────────────────────
+  XY span:        406.42 mm  (16.001")
+  Dome height:    69.17 mm  (2.723")
+  Throw distance: 406.4 mm  (16.00")
+
+── WARNINGS ──────────────────────────────────────────
+  ⚠  DOME 69.2mm EXCEEDS 1" MATERIAL (25.4mm) — cannot mill

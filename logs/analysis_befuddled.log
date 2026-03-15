@@ -1,0 +1,31 @@
+Loading images...
+Computing metrics...
+
+═══ METRIC REPORT ═══════════════════════════════════════════════
+  SSIM(befuddled caustic, befuddled input):  0.1207
+  SSIM(cow v3 caustic, original cow):        0.0872
+  Pearson r(befuddled, brightness):          -0.1958
+  Pearson r(befuddled, edges):               +0.2185
+  Pearson r(cow v3, brightness):             -0.1014
+  Pearson r(cow v3, edges):                  +0.3151
+
+  Brightness stats:
+    befuddled     mean=0.1641  std=0.2154  p75=0.3882  p90=0.4706  p99=0.6549
+    cow v3        mean=0.1117  std=0.1552  p75=0.2451  p90=0.3162  p99=0.6126
+
+  Quadrant brightness (bottom-right = background):
+  Region               Input    Cow v3   Befuddled
+  top-left             0.564     0.104       0.182
+  top-right            0.728     0.129       0.196
+  bottom-left          0.173     0.117       0.136
+  bottom-right         0.389     0.097       0.142  ← KEY
+
+  Bottom-right improvement (befuddled vs v3): +0.0451
+═══════════════════════════════════════════════════════════════════
+
+Rendering 9-panel analysis figure...
+Saved → /Users/admin/causticsEngineering/examples/befuddled_analysis_v1.png
+Writing HANDOFF_BEFUDDLED_v1.md ...
+Saved → HANDOFF_BEFUDDLED_v1.md
+
+Analysis complete.

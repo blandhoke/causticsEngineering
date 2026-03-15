@@ -1,0 +1,4 @@
+  File "/Users/admin/causticsEngineering/verify_obj.py", line 34
+    print(f"  Dome height:   {dome_mm:.2f} mm  ({'✓ fits in 1\" acrylic' if dome_mm < 25.4 else '⚠ EXCEEDS 1\" ACRYLIC THICKNESS'})")
+                                                                                                                                        ^
+SyntaxError: f-string expression part cannot include a backslash

@@ -1,0 +1,16 @@
+Parsing /Users/admin/causticsEngineering/examples/original_image.obj ...
+
+── Geometry ──────────────────────────────────────
+  Vertices:      2,101,250
+  Faces:         4,202,496
+
+  XY span:       200.01 mm  (0.20001 m)
+  Z range:       -19.531 mm → 6.129 mm
+  Dome height:   25.66 mm  (⚠ EXCEEDS 1" ACRYLIC THICKNESS)
+
+  Top-surface faces (Z>0): 2,100,744  (50.0%)
+  ⚠ LOW top-surface ratio — check mesh
+
+── ERRORS ────────────────────────────────────────
+  STOP: dome height 25.7mm exceeds 25.4mm (1" acrylic)
+  STOP: top-surface faces only 50.0% — mesh may be inverted

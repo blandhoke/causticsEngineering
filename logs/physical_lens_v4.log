@@ -1,0 +1,30 @@
+── Physical Lens Scaler ──────────────────────────────
+  Input:  original_image.obj
+  Output: physical_lens_8x8.obj
+  Target: 203.2 mm x 203.2 mm  (8")
+
+Parsing OBJ...
+
+── Native mesh ───────────────────────────────────────
+  Vertices:    2,101,250
+  XY span:     200.01 mm  (0.20001 m)
+  Dome height: 24.82 mm
+
+── Scale factor ──────────────────────────────────────
+  203.2 mm / 200.01 mm = 1.0159x  (all axes)
+
+── Scaled (physical) ─────────────────────────────────
+  XY span:        203.20 mm  (8.000")
+  Dome height:    25.22 mm  (0.993")
+  Throw distance: 203.2 mm  (8.00")
+
+  ✓ Dome height fits within 1" material
+
+Writing scaled OBJ → physical_lens_8x8.obj ...
+  Written: 177.3 MB
+
+── Done ──────────────────────────────────────────────
+  Physical OBJ: /Users/admin/causticsEngineering/examples/physical_lens_8x8.obj
+  XY:    203.2 mm x 203.2 mm
+  Dome:  25.22 mm
+  Throw: 203 mm  (8.0")

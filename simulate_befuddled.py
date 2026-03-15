@@ -17,12 +17,12 @@ from pathlib import Path
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE        = Path("/Users/admin/causticsEngineering/examples")
 OBJ_PATH    = BASE / "original_image.obj"
-OUTPUT_PATH = BASE / "caustic_befuddled_v1.png"
-ACCUM_PATH  = BASE / "befuddled_accum.npy"
-META_PATH   = BASE / "befuddled_meta.npy"
+OUTPUT_PATH = BASE / "caustic_befuddled_v4.png"
+ACCUM_PATH  = BASE / "befuddled_v4_accum.npy"
+META_PATH   = BASE / "befuddled_v4_meta.npy"
 
 # Guard: never silently overwrite the reference render
-assert OUTPUT_PATH.name != "caustic_simulated.png", "Refusing to overwrite reference render"
+assert OUTPUT_PATH.name not in ("caustic_simulated.png", "caustic_befuddled_v1.png", "caustic_befuddled_v2.png", "caustic_befuddled_v3.png"), "Refusing to overwrite reference render"
 
 IOR          = 1.49      # acrylic / PMMA
 FOCAL_DIST   = 0.2       # metres
@@ -201,7 +201,7 @@ for spine in ax.spines.values():
     spine.set_edgecolor('#444')
 ax.set_xlabel("X (m)")
 ax.set_ylabel("Y (m)")
-ax.set_title("Predicted caustic (befuddled cow)  —  IOR 1.49  |  4-pass Gaussian splat",
+ax.set_title("Predicted caustic (befuddled cow v4)  —  IOR 1.49  |  f=0.75m  |  4-pass Gaussian splat",
              color='#ddd', fontsize=12)
 plt.tight_layout()
 plt.savefig(OUTPUT_PATH, dpi=150, bbox_inches='tight', facecolor='black')

@@ -1,0 +1,13 @@
+Input stats:  min=0.118  max=0.859  mean=0.463
+v3 stats:     min=0.000  max=0.988  mean=0.111
+v4 stats:     min=0.000  max=0.992  mean=0.326
+v5 stats:     min=0.000  max=0.984  mean=0.130
+
+SSIM(v5, input):  0.1224
+SSIM(v4, input):  0.1400
+SSIM(v3, input):  0.1331
+r(v5, brightness): -0.2019
+r(v5, edges):      0.2045
+v5 mean/std/p75/p90/p99: 0.1296 / 0.1692 / 0.3020 / 0.3647 / 0.5098
+
+Saved → /Users/admin/causticsEngineering/examples/befuddled_analysis_v5.png

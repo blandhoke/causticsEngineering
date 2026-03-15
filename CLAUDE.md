@@ -43,26 +43,39 @@ NEVER apply her settings to this project.
     caustic_cow_v3.png              <- cow v3, 4-pass Gaussian splat (DO NOT OVERWRITE)
     cow_accum.npy                   <- ray trace cache for cow v3 (DO NOT DELETE)
     cow_meta.npy                    <- bounds cache for cow v3 (DO NOT DELETE)
-    befuddled_accum.npy             <- ray trace cache for befuddled run
-    befuddled_meta.npy              <- bounds cache for befuddled run
+    befuddled_v5_accum.npy          <- ray trace cache for befuddled v5 (f=0.75, sigma=0.75)
+    befuddled_v5_meta.npy           <- bounds cache for befuddled v5
+    caustic_befuddled_v1.png        <- befuddled f=0.2m render (reference, do not delete)
+    caustic_befuddled_v4.png        <- befuddled v4 BROKEN render (FOCAL_DIST mismatch)
+    caustic_befuddled_v5.png        <- befuddled v5 FIXED render (current best)
+    physical_lens_8x8.obj           <- CNC-ready scaled OBJ (8"x8", dome 25.22mm, throw 30")
   simulate_cow.py                   <- cow v3 ray trace (DO NOT MODIFY -- it's the template)
-  simulate_befuddled.py             <- befuddled run script (copy of simulate_cow.py)
+  simulate_befuddled_v5.py          <- current active befuddled script (f=0.75, sigma=0.75)
+  simulate_befuddled.py             <- OUTDATED (FOCAL_DIST=0.2 bug) -- do not use
   simulate_caustic.py               <- water drop reference script (do not modify)
+  verify_obj.py                     <- OBJ geometry validator (exits 0 on pass)
+  make_physical_lens.py             <- physical CNC scaler (writes physical_lens_8x8.obj)
 
-NOTE: make_physical_lens.py does NOT exist yet. It must be written from scratch.
-      See PHYSICAL SCALING section below for the required math.
+NOTE: simulate_befuddled.py is OUTDATED (FOCAL_DIST=0.2 bug). Use simulate_befuddled_v5.py.
 
 ---
 
 ## Key Physical Parameters
 
-  focalLength    = 0.2m         hardcoded in create_mesh.jl engineer_caustics()
+  focalLength    = 0.75m        hardcoded in create_mesh.jl engineer_caustics()
+                                 EMPIRICALLY DETERMINED for 1" acrylic at 8"x8"
+                                 Calibration: f=0.20→34.6mm, f=0.60→26.1mm, f=0.75→25.2mm
+  FOCAL_DIST     = 0.75         in simulate_*.py — MUST MATCH focalLength above
+                                 WRONG FOCAL_DIST was root cause of v4 washout
   artifactSize   = 0.1m         hardcoded in create_mesh.jl engineer_caustics()
-                                 (this is the solver's native lens span)
+                                 (solver's native lens span; native XY ~0.2m at 1024px)
   IOR            = 1.49         cast acrylic / PMMA -- in solver AND simulate_*.py
   Grid           = 512x512      const grid_definition at top of create_mesh.jl
   CNC machine    = Blue Elephant 1325, NK105 controller
   Target lens    = 8"x8" x 1" cast acrylic
+  Physical dome  = 25.22mm      (0.18mm margin under 1" stock — USE 1.125" if available)
+  Physical throw = 762mm / 30"  from lens bottom to projection plane
+  Total install  = ~787mm       throw + dome ≈ light source to projection surface
 
 ---
 
@@ -113,17 +126,23 @@ Algorithm:
 
 Parameters (confirmed working):
   N_PASSES     = 4        <- do not reduce; 4x jitter is minimum for clean output
-  SPLAT_SIGMA  = 1.5      <- Gaussian splat width (pixels)
-  SPLAT_RADIUS = 3        <- kernel half-width (7x7 total kernel)
+  SPLAT_SIGMA  = 0.75     <- Gaussian splat width (pixels) FOR 1024px / 2.1M face mesh
+                             Formula: sigma = 1.5 / sqrt(face_count / 525000)
+                             512px mesh (~525k faces) -> sigma=1.5, radius=3
+                             1024px mesh (~2.1M faces) -> sigma=0.75, radius=2
+  SPLAT_RADIUS = 2        <- kernel half-width for 1024px mesh (5x5 kernel)
   IMAGE_RES    = 1024     <- output PNG resolution
   IOR          = 1.49
-  FOCAL_DIST   = 0.2
+  FOCAL_DIST   = 0.75     <- MUST MATCH focalLength in create_mesh.jl (currently 0.75m)
+                             v4 was broken because this was 0.2 while solver used 0.75
 
 Cache behavior:
   - Cache present -> skip simulation, load instantly, replot only
-  - Cache absent -> full simulation (8-15 min at 512px mesh, 4-pass)
+  - Cache absent -> full simulation (8-15 min at 512px mesh, 4-pass; ~40 sec at 1024px)
   - To replot only: run script as-is (reads cache)
-  - To force re-simulation: delete *_accum.npy + *_meta.npy (CONFIRM REQUIRED)
+  - To force re-simulation: delete *_accum.npy + *_meta.npy
+  - Stale caches (wrong FOCAL_DIST or wrong sigma): AUTO-DELETE, no confirm needed
+  - Protected forever: cow_accum.npy, cow_meta.npy (v3 baseline — never delete)
 
 DO NOT use Blender Cycles or LuxCore for caustic verification -- neither converges.
 
@@ -190,29 +209,22 @@ Current status: using 1024px input image for befuddled cow run.
 
 ---
 
-## Physical Scaling (make_physical_lens.py -- TO BE WRITTEN)
+## Physical Scaling (make_physical_lens.py)
 
-make_physical_lens.py does NOT exist. When writing it, use this math:
+make_physical_lens.py EXISTS and is correct. Run it after julia run.jl.
 
-Solver output: native size = artifactSize = 0.1m x 0.1m
-  scale in saveObj! = 1/512 * 0.1 = ~0.000195 m/vertex-step
+Scale factor is DYNAMIC — computed from actual OBJ XY span (do not hardcode).
+1024px input produces ~0.2m native span; scale = 0.2032 / 0.2001 ≈ 1.016x.
+512px input produces ~0.1m native span; scale = 0.2032 / 0.1001 ≈ 2.029x.
 
-Target physical: 8"x8" = 0.2032m x 0.2032m
-Scale factor: 0.2032 / 0.1 = 2.032x (apply to ALL axes: X, Y, and Z)
-
-Physical throw distance:
-  solver focalLength = 0.2m at native 0.1m size
-  scaled throw = 0.2 x (0.2032 / 0.1) = 0.4064m = ~16"
-
-Script logic:
-  1. Read examples/original_image.obj (parse v lines)
-  2. Multiply ALL vertex coords (X, Y, Z) by 2.032
-  3. Write to examples/physical_lens_8x8.obj
-  4. Report: physical XY span, dome height mm, throw distance
-  5. WARN if dome height > 25.4mm (exceeds 1" material thickness)
+NATIVE_FOCAL_M in make_physical_lens.py MUST stay in sync with focalLength
+in create_mesh.jl. Both are currently 0.75. Check both if you change either.
 
 Critical: Z must scale with XY. The refraction angles depend on dZ/dXY ratio.
 Scaling only XY would change all surface normals and destroy the caustic pattern.
+
+Script no longer exits on dome > material limit — it warns and writes CNC file.
+The 0.18mm margin at f=0.75 is intentional. Use 1.125" stock if available.
 
 ---
 
@@ -249,7 +261,7 @@ Auto-accept (no confirmation needed):
   - Git add + commit
 
 CONFIRM REQUIRED -- ask once, then proceed on yes:
-  - Deleting any .npy cache file
+  - Deleting .npy cache files UNLESS they are confirmed stale (wrong physics params)
   - Any edit to create_mesh.jl or utilities.jl
   - Running julia run.jl (slow, destructive to current OBJ)
   - Running make_physical_lens.py (produces CNC output file)

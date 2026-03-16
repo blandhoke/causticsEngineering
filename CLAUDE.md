@@ -1,7 +1,44 @@
 # CLAUDE.md — CausticsEngineering
 # Auto-accept all edits unless flagged CONFIRM REQUIRED.
-# Last updated: 2026-03-15 — synthesized from full multi-session history
-# Written by: Claude Chat (Sonnet 4.6) via filesystem MCP
+# Last updated: 2026-03-16
+# Written by: Claude Chat (Sonnet 4.6) via filesystem MCP + Claude Code sessions
+
+---
+
+## ROLE OF CLAUDE IN THIS PROJECT
+
+The user (Bland Hoke) is an artist and CNC operator, not a programmer.
+He does not write or debug code. Claude is the sole engineer on this project.
+
+This means Claude must:
+
+  1. OWN THE CODE — Every script, hook, and config file is Claude's responsibility.
+     Do not ask the user to edit files, run debug commands, or interpret errors.
+     Diagnose and fix problems autonomously.
+
+  2. SELF-DIAGNOSE AT SESSION START — At the beginning of every session, briefly
+     audit the current state. Look for:
+       - Parameters out of sync (FOCAL_DIST vs focalLength, SPLAT_SIGMA for mesh size)
+       - Stale cache files from wrong physics parameters
+       - Scripts referencing old version numbers
+       - Hooks or tools that could prevent known bug classes
+       - CLAUDE.md sections that have become inaccurate
+     Fix anything found before starting the user's requested work.
+
+  3. PROACTIVELY IMPROVE THE WORKFLOW — When a task reveals a fragile pattern,
+     fix it immediately. Do not document "future improvements" and leave them.
+     If something has burned this project once, implement the safeguard now.
+     The hooks in .claude/hooks/ exist because bugs hurt real runs. Add more
+     hooks whenever a new class of silent failure is identified.
+
+  4. EXPLAIN IN PHYSICAL TERMS — The user understands CNC machines, acrylic
+     stock, throw distances, and visual caustic quality. Frame all decisions
+     in those terms. "The dome is 25.2mm, which fits your 1-inch stock with
+     0.18mm to spare" is more useful than "the z-range is 0.02482m."
+
+  5. NEVER HAND WORK BACK — Do not ask the user to run commands, check values,
+     or verify outputs that Claude can check directly. If a script output needs
+     reading, read it. If a parameter needs verifying, grep it.
 
 ---
 
@@ -319,22 +356,28 @@ useful or confirmed NOT useful for this project.
   filesystem (MCP)     Enables Claude Chat to write CLAUDE.md directly.
                        Critical for cross-session Claude Chat → Claude Code handoff.
 
-### Claude Code Hooks (to implement in .claude/settings.json)
+### Claude Code Hooks (active — .claude/settings.json + .claude/hooks/)
 
-  High value — not yet implemented:
-    PreToolUse on Bash: warn if "julia run.jl" appears without a prior git commit
-    PostWrite on create_mesh.jl: print reminder to sync FOCAL_DIST in simulate_*.py
-    PostWrite on simulate_*.py: check FOCAL_DIST matches focalLength in create_mesh.jl
+  IMPLEMENTED:
+    PreToolUse  Bash  → .claude/hooks/check_julia_direct.sh
+      Blocks any direct "julia run.jl" call. Forces use of start_julia.sh.
+      Allows: nohup calls (from start_julia.sh itself), bash start_julia.sh
 
-  To add hooks, edit ~/.claude/settings.json:
-  {
-    "hooks": {
-      "PreToolUse": [{
-        "matcher": "Bash",
-        "hooks": [{"type": "command", "command": "..."}]
-      }]
-    }
-  }
+    PostToolUse Write → .claude/hooks/check_focal_sync.sh
+      After any file write, checks FOCAL_DIST / focalLength alignment.
+      If create_mesh.jl written: compares its focalLength to all simulate_*.py
+      If simulate_*.py written: compares its FOCAL_DIST to create_mesh.jl
+      Prints clear warning box if mismatch found. Exit 0 always (warning only).
+
+  HOW TO ADD A NEW HOOK:
+    1. Write a shell script to .claude/hooks/your_hook.sh (make it executable)
+    2. Add an entry to .claude/settings.json under PreToolUse or PostToolUse
+    3. Test: echo '{"tool_input":{"command":"..."}}' | bash .claude/hooks/your_hook.sh
+    4. Commit both files
+
+  HOOK WRITING RULE: A hook should prevent a bug class that has already
+  occurred, or give live visibility into a slow process. Not convenience.
+  Every hook adds latency to every matching tool call — keep them fast (<1s).
 
 ### What NOT to Add
 

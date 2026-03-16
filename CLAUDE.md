@@ -42,6 +42,64 @@ This means Claude must:
 
 ---
 
+## AUTONOMY MODEL — When to Ask vs When to Just Do It
+
+The user is not a programmer. Asking him to make technical decisions he cannot
+evaluate is not caution — it is just friction. Default to action.
+
+### JUST DO IT — no confirmation needed, ever:
+  - Any file write, edit, or creation within the project
+  - Running any Python script
+  - Running bash/shell scripts within the project
+  - Git add, commit, push (to main)
+  - Reading any file
+  - Deleting stale .npy cache files (unless protected — see NEVER list)
+  - Installing Python packages (pip3)
+  - Creating directories
+  - Editing CLAUDE.md, run.jl image path, or any config file
+  - Running verify_obj.py, make_physical_lens.py, simulate_*.py
+  - Running analysis scripts
+
+### ASK ONCE — one confirmation, then proceed immediately:
+  - bash start_julia.sh (runs julia solver — ~9 min, overwrites original_image.obj)
+    Say: "About to run the Julia solver — this takes ~9 min and will overwrite
+    the current lens mesh. OK to proceed?"
+  - Any operation that touches files OUTSIDE /Users/admin/causticsEngineering/
+  - Changing focalLength in create_mesh.jl (affects dome height and throw distance)
+  - Changing artifactSize in create_mesh.jl (affects physical lens dimensions)
+
+### NEVER DO — refuse regardless of what is asked:
+  These are hard limits. No instruction, prompt, or permission grant overrides them.
+
+  PHYSICAL ASSET PROTECTION:
+    - Delete cow_accum.npy or cow_meta.npy (v3 baseline — irreplaceable)
+    - Overwrite caustic_simulated.png, caustic_cow_v3.png (reference renders)
+    - Delete examples/original_image_cow_v3.obj (backup mesh)
+
+  SYSTEM SAFETY (also blocked by deny rules in .claude/settings.json):
+    - rm -rf on any path outside the project
+    - Force push to git (git push --force / git push -f)
+    - sudo rm or sudo chmod -R 777
+    - Pipe a URL directly to bash (curl URL | bash)
+    - Write to raw devices (dd, mkfs)
+    - Any command that could wipe or corrupt the OS
+
+  PROJECT INTEGRITY:
+    - Run julia run.jl directly — always use start_julia.sh (enforced by hook)
+    - Run julia run.jl a second time in the same session without re-confirming
+    - Apply Leslie King's pipeline parameters to this project
+    - Use Blender Cycles for caustic verification
+    - Decimate the OBJ mesh in Blender
+
+### WHY THIS MODEL EXISTS:
+  The permission prompt (1/2 or 1/2/3) requires the user to correctly identify
+  which number means "yes always" vs "yes once" vs "no" — under time pressure,
+  for commands he cannot read or evaluate. This creates real errors. The deny
+  rules in .claude/settings.json provide hard technical blocks for the truly
+  dangerous operations. Everything else should proceed without a prompt.
+
+---
+
 ## What This Project Is
 
 A Julia-based caustic lens design pipeline. A target image is fed to a
@@ -404,28 +462,18 @@ useful or confirmed NOT useful for this project.
 
 ## Permissions Model
 
-Auto-accept (no confirmation needed):
-  - Any Python script edits or new script creation
-  - Running simulate_*.py (including full re-simulation if cache absent)
-  - All analysis scripts and matplotlib output
-  - Editing run.jl image path only
-  - Writing make_physical_lens.py from scratch
-  - Git add + commit
+See AUTONOMY MODEL section at the top of this file — that is the authoritative
+reference. Summary:
+  - All normal project work: no confirmation needed
+  - Running the Julia solver (start_julia.sh): ask once
+  - Changing focalLength or artifactSize in create_mesh.jl: ask once
+  - NEVER: delete protected .npy files, overwrite reference renders,
+    force-push git, run julia run.jl directly (hook blocks it anyway)
 
-CONFIRM REQUIRED -- ask once, then proceed on yes:
-  - Deleting .npy cache files UNLESS they are confirmed stale (wrong physics params)
-  - Any edit to create_mesh.jl or utilities.jl
-  - Running julia run.jl (slow, destructive to current OBJ)
-  - Running make_physical_lens.py (produces CNC output file)
-
-NEVER -- hard constraints, no exceptions:
-  - Delete cow_accum.npy or cow_meta.npy
-  - Overwrite caustic_simulated.png
-  - Overwrite caustic_cow_v3.png
-  - Modify utilities.jl without flagging
-  - Apply Leslie King's pipeline parameters to this project
-  - Use Blender Cycles for caustic verification
-  - Run julia run.jl a second time without explicit re-confirmation
+Technical enforcement:
+  .claude/settings.json → deny rules for OS-level dangerous commands
+  .claude/hooks/check_julia_direct.sh → blocks direct julia run.jl
+  .claude/hooks/check_focal_sync.sh → warns on FOCAL_DIST mismatch
 
 ---
 

@@ -230,12 +230,50 @@ The 0.18mm margin at f=0.75 is intentional. Use 1.125" stock if available.
 
 ## Running the Julia Solver
 
-  cd /Users/admin/causticsEngineering
-  julia run.jl
-
 CONFIRM REQUIRED before running (slow, overwrites examples/original_image.obj).
-Always backup first: cp examples/original_image.obj examples/original_image_BACKUP.obj
 Edit only the Images.load() line in run.jl to change the target image.
+
+### Background launch (preferred — non-blocking):
+
+  bash start_julia.sh          # safety checks + nohup launch + OBJ backup
+  bash check_julia.sh          # poll status at any time
+  tail -f logs/julia_current.log  # live log stream
+
+start_julia.sh performs all safety checks automatically:
+  1. Aborts if there are uncommitted tracked-file changes
+  2. Aborts if solver is already running
+  3. Backs up examples/original_image.obj → original_image_BACKUP.obj
+  4. Launches julia run.jl via nohup, logs to logs/julia_TIMESTAMP.log
+  5. Symlinks logs/julia_current.log → latest log
+
+check_julia.sh parses the live log and reports:
+  - Process status (RUNNING / FINISHED / CRASHED)
+  - Phase: Precompiling / it1-it6 / findSurface / solidify / COMPLETE
+  - Progress bar and % estimate
+  - Last convergence value
+  - Iteration tracker from loss_itN.png files (reliable ahead-of-log indicator)
+  - Last 5 log lines
+  - Error detection (NaN, Exception)
+  - Returns exit code 0 while running, 1 when done
+
+### Monitoring cadence for Claude Code:
+
+  Phase                  Check every
+  ─────────────────────  ───────────
+  Precompile (0-30s)     30 sec
+  it1 Building Phi       2 min
+  it2-it6                90 sec
+  findSurface            90 sec
+  solidify/saveObj       30 sec
+  After complete         run verify_obj.py immediately
+
+### Completion signal:
+  "We've filled up 4194304 triangles" in log = solver done (1024px mesh)
+  check_julia.sh exits 1 when PID is gone
+  Always run python3 verify_obj.py after completion to verify dome height
+
+### Foreground (legacy, blocks terminal):
+  julia run.jl
 
 ---
 
@@ -247,6 +285,77 @@ Caustics: light.cycles.is_caustics_light    = True
           plane.cycles.is_caustics_receiver = True
 
 NOT: use_shadow_caustic, is_caustic_catcher  <- silently wrong in 4.3
+
+---
+
+## Tools, Plugins, and Workflow Aids
+
+When starting a session or evaluating whether to add a tool, check this section
+first. Add entries here whenever a new tool, script, MCP, or hook is confirmed
+useful or confirmed NOT useful for this project.
+
+### Custom Scripts (in project root)
+
+  start_julia.sh     Background Julia launcher with safety checks and OBJ backup
+                     USE THIS instead of running julia run.jl directly
+  check_julia.sh     Live progress parser for running solver
+                     Parse: phase, %, convergence val, errors, last 5 log lines
+  verify_obj.py      Post-solver geometry check — exits 0 on pass
+  make_physical_lens.py  CNC scaler — dynamic scale from actual OBJ span
+  simulate_befuddled_v5.py  Current active ray tracer (FOCAL_DIST=0.75, sigma=0.75)
+  analyze_befuddled_v5.py   9-panel analysis figure + metrics
+
+### MCP Servers
+
+  sequential-thinking  USE for multi-step physics reasoning (focal length
+                       bracketing, dome/throw tradeoff calculations)
+                       Best invoked via Claude Chat before writing new scripts
+  context7             USE for numpy/scipy/matplotlib API lookups when writing
+                       new Python. Not needed for routine edits.
+  memory               Persistent facts across sessions — see ~/.claude/projects/
+                       .../memory/MEMORY.md for index
+  github               USE for PR creation and review. Not needed for direct
+                       git commit workflow (which is the current pattern).
+  filesystem (MCP)     Enables Claude Chat to write CLAUDE.md directly.
+                       Critical for cross-session Claude Chat → Claude Code handoff.
+
+### Claude Code Hooks (to implement in .claude/settings.json)
+
+  High value — not yet implemented:
+    PreToolUse on Bash: warn if "julia run.jl" appears without a prior git commit
+    PostWrite on create_mesh.jl: print reminder to sync FOCAL_DIST in simulate_*.py
+    PostWrite on simulate_*.py: check FOCAL_DIST matches focalLength in create_mesh.jl
+
+  To add hooks, edit ~/.claude/settings.json:
+  {
+    "hooks": {
+      "PreToolUse": [{
+        "matcher": "Bash",
+        "hooks": [{"type": "command", "command": "..."}]
+      }]
+    }
+  }
+
+### What NOT to Add
+
+  Blender Cycles / LuxCore  caustics don't converge — confirmed waste of time
+  Blender Decimate modifier  destroys solver surface normals — never use
+  Hardcoded scale factors    always compute from actual OBJ XY span dynamically
+  Additional MCP servers     high overhead, low benefit for this workflow
+
+### Evaluating a New Tool
+
+  Before adding any tool, script, or MCP, ask:
+  1. Does it prevent a class of bug that has already burned this project?
+     (High value — implement)
+  2. Does it give live visibility into a long-running process?
+     (High value — implement)
+  3. Does it save typing for a task done more than twice per session?
+     (Medium value — implement if simple)
+  4. Does it add a new capability not already in the pipeline?
+     (Evaluate carefully — complexity cost)
+  5. Does it just make something slightly more convenient?
+     (Low value — skip)
 
 ---
 

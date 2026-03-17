@@ -24,6 +24,7 @@ echo "Output: $OUT_DIR"
 case "$SPEED" in
   fast)   JL_SCRIPT="run_fast.jl"   ;;
   normal) JL_SCRIPT="run_normal.jl"  ;;
+  prod)   JL_SCRIPT="run_prod.jl"    ;;
   *)      echo "Unknown speed: $SPEED"; exit 1 ;;
 esac
 

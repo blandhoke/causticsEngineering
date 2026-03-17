@@ -1,0 +1,4 @@
+block1_q1  examples/block1_q1_alpha100.png
+block1_q2  examples/block1_q2_alpha067.png
+block1_q3  examples/block1_q3_alpha033.png
+block1_q4  examples/block1_q4_alpha000.png

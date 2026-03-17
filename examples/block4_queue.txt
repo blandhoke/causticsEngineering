@@ -1,0 +1,4 @@
+block4_q1  examples/block4_q1_unsharp_s2_a05.png
+block4_q2  examples/block4_q2_unsharp_s4_a15.png
+block4_q3  examples/block4_q3_bandpass_2_32.png
+block4_q4  examples/block4_q4_bandpass_1_8.png

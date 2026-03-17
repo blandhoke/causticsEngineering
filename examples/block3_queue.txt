@@ -1,0 +1,4 @@
+block3_q1  examples/block3_q1_grad_p10.png
+block3_q2  examples/block3_q2_blur3_grad.png
+block3_q3  examples/block3_q3_blur8_grad.png
+block3_q4  examples/block3_q4_blur3_photo.png

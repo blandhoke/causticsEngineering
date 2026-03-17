@@ -1,0 +1,4 @@
+block2_q1  examples/block2_q1_clahe_c2_t8.png
+block2_q2  examples/block2_q2_clahe_c4_t8.png
+block2_q3  examples/block2_q3_clahe_c4_t32.png
+block2_q4  examples/block2_q4_clahe_c8_t16.png

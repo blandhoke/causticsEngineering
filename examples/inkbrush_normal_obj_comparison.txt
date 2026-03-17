@@ -1,0 +1,53 @@
+============================================================
+  Original inkbrush (no Sobel)  vs  Sobel-preprocessed inkbrush
+============================================================
+
+── Vertex / Face counts ──────────────────────────────────
+  Vertices:     526,338      526,338   MATCH
+  Faces:      1,052,672    1,052,672   MATCH
+
+── Bounding Box ──────────────────────────────────────────
+  Original inkbrush (no Sobel):
+    XY span:     100.002 mm
+    Dome height: 22.051 mm   (z -19.531 → 2.520 mm)
+    Centroid:    (50.194, 50.195) mm
+  Sobel-preprocessed inkbrush:
+    XY span:     100.097 mm
+    Dome height: 21.632 mm   (z -19.531 → 2.101 mm)
+    Centroid:    (50.147, 50.148) mm
+
+── Top-Surface Height Field Statistics ───────────────────
+  Original inkbrush (no Sobel)  (top verts: 264,185)
+    z mean:    1.8808 mm
+    z std:     1.3541 mm
+    z p5:      1.6040 mm
+    z p50:     1.9286 mm
+    z p95:     2.4387 mm
+    z range:   22.0515 mm
+  Sobel-preprocessed inkbrush  (top verts: 263,170)
+    z mean:    1.9678 mm
+    z std:     0.1022 mm
+    z p5:      1.8011 mm
+    z p50:     1.9836 mm
+    z p95:     2.0885 mm
+    z range:   21.6322 mm
+
+── Height Field Cross-Comparison (256×256 grid) ──────────
+  Valid comparison pixels: 65,280 / 65,536 (99.6%)
+  Height difference (A - B):
+    Mean:    -0.0314 mm  (B higher)
+    Std:     1.3740 mm
+    Max abs: 21.5261 mm
+    RMS:     1.3744 mm
+  Pearson r (height correlation): -0.020502
+  Height fields are SIGNIFICANTLY DIFFERENT
+
+  Surface curvature (Laplacian, mm⁻¹):
+    Original inkbrush (no Sobel): mean=-47373.7376  std=12778605.4685  rms=12778693.2818
+    Sobel-preprocessed inkbrush: mean=-4.7498  std=2205.0073  rms=2205.0124
+    RMS curvature ratio (B/A): 0.0002
+    A has HIGHER curvature
+
+Comparison figure → examples/inkbrush_normal_obj_comparison.png
+
+============================================================

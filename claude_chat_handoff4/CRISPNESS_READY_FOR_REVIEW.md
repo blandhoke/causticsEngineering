@@ -9,10 +9,11 @@
 | File | Contents | Size |
 |------|----------|------|
 | O_sigma_sweep.jpg | Sigma: 0.25 / 0.50 / 0.75 / 1.00 / 1.50 (5 panels) | ~173KB |
-| P_postprocess_sweep.jpg | 6 post-process variants incl. gamma=0.70 (6 panels) | ~236KB |
+| P_postprocess_sweep.jpg | 7 post-process variants: baseline/no-blur/gaussian-03/gaussian-05/unsharp/gamma-065/gamma-070 | ~236KB |
 | Q_passes_sweep.jpg | 4-pass baseline / 8-pass σ=0.75 / 16-pass σ=0.50 (3 panels) | ~137KB |
-| R_best_vs_baseline.jpg | Baseline vs Best Sigma vs Best Render (3 panels) | ~153KB |
+| R_best_vs_baseline.jpg | Baseline vs gamma=0.65 vs gamma=0.70 (4 panels) | ~162KB |
 | S_nikon_best_params.jpg | Nikon: baseline vs σ=0.50 16-pass (2 panels) | ~116KB |
+| T_cmap_sigma_comparison.jpg | sunlight vs 'hot' colormap + σ=0.50 vs σ=0.75 (4 panels) | ~170KB |
 
 ---
 
@@ -47,9 +48,11 @@ Which sigma panel looks sharpest WITHOUT visible mesh-grid artifact?
 Options: 0.25 (ultra), 0.50 (very crisp), 0.75 (crisp), 1.00 (moderate), 1.50 (current).
 Grid artifact looks like a regular dot or stripe pattern in the background of the caustic.
 
-**Q2 — Post-Process (P_postprocess_sweep.jpg):**
-Does gamma=0.70 (bottom right panel) look better or worse than gamma=0.50 with no-blur?
-Is the darker background an improvement, or does it lose too much shadow detail?
+**Q2 — Gamma (R_best_vs_baseline.jpg):**
+Compare 4 panels: baseline (γ=0.5, post-blur, bilinear) / no-blur nearest γ=0.5 / γ=0.65 / γ=0.70.
+Subagents predict γ=0.70 makes the background genuinely black vs amber, increasing apparent contrast.
+Does this look better, or does it lose too much shadow detail in the caustic halos?
+Preferred gamma: 0.50 / 0.65 / 0.70 ?
 
 **Q3 — Passes (Q_passes_sweep.jpg):**
 Is there a visible sharpness improvement between 4-pass baseline and 16-pass sigma=0.50?
@@ -63,6 +66,11 @@ for the final production run?
 **Q5 — Nikon (S_nikon_best_params.jpg):**
 Does sigma=0.50 + 16-pass look good on the nikon image, or is there visible grid artifact
 that wasn't present in the inkbrush?
+
+**Q6 — Colormap (T_cmap_sigma_comparison.jpg):**
+Two colormaps: 'sunlight' (current amber) and 'hot' (black→red→orange→yellow→white, used in published caustic papers).
+Plus sigma=0.50 vs sigma=0.75 variants.
+Which colormap + sigma combination looks best?
 
 ---
 
@@ -93,4 +101,5 @@ Format:
   Q3: passes worth it: yes/no (reason: ...)
   Q4: recommended panel: baseline/best-sigma/best-render (reason: ...)
   Q5: nikon grid artifact: yes/no (reason: ...)
-  RECOMMENDED DEFAULTS: (your call on sigma, gamma, passes, post-sigma, interp)
+  Q6: preferred colormap: sunlight / hot (reason: ...)
+  RECOMMENDED DEFAULTS: (your call on sigma, gamma, passes, post-sigma, interp, colormap)

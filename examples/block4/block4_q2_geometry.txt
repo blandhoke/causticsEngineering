@@ -1,0 +1,53 @@
+============================================================
+  block4_q2 HYPER  vs  inkbrush NORMAL baseline
+============================================================
+
+── Vertex / Face counts ──────────────────────────────────
+  Vertices:      33,282      526,338   DIFFER
+  Faces:         66,560    1,052,672   DIFFER
+
+── Bounding Box ──────────────────────────────────────────
+  block4_q2 HYPER:
+    XY span:     25.004 mm
+    Dome height: 21.599 mm   (z -19.531 → 2.068 mm)
+    Centroid:    (12.693, 12.695) mm
+  inkbrush NORMAL baseline:
+    XY span:     100.002 mm
+    Dome height: 22.051 mm   (z -19.531 → 2.520 mm)
+    Centroid:    (50.194, 50.195) mm
+
+── Top-Surface Height Field Statistics ───────────────────
+  block4_q2 HYPER  (top verts: 16,896)
+    z mean:    1.6197 mm
+    z std:     2.6189 mm
+    z p5:      1.8507 mm
+    z p50:     1.9377 mm
+    z p95:     2.0428 mm
+    z range:   21.5992 mm
+  inkbrush NORMAL baseline  (top verts: 264,185)
+    z mean:    1.8808 mm
+    z std:     1.3541 mm
+    z p5:      1.6040 mm
+    z p50:     1.9286 mm
+    z p95:     2.4387 mm
+    z range:   22.0515 mm
+
+── Height Field Cross-Comparison (256×256 grid) ──────────
+  Valid comparison pixels: 65,280 / 65,536 (99.6%)
+  Height difference (A - B):
+    Mean:    -0.1830 mm  (B higher)
+    Std:     0.6478 mm
+    Max abs: 12.8466 mm
+    RMS:     0.6732 mm
+  Pearson r (height correlation): 0.914431
+  Height fields are MODERATELY CORRELATED
+
+  Surface curvature (Laplacian, mm⁻¹):
+    block4_q2 HYPER: mean=-732137.5945  std=179386025.8879  rms=179387519.9375
+    inkbrush NORMAL baseline: mean=+2506170.6793  std=168924924.1635  rms=168943513.9185
+    RMS curvature ratio (B/A): 0.9417
+    A has HIGHER curvature
+
+Comparison figure → examples/block4//block4_q2_geometry.png
+
+============================================================

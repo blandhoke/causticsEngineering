@@ -1,0 +1,8 @@
+{
+  "label": "block3_q4",
+  "ssim": 0.31237757817799755,
+  "pearson_r_edges": -0.019870972260832787,
+  "pct_black": 81.89849853515625,
+  "max_pixel_raw": 251.0,
+  "mean_brightness": 0.04545506834983826
+}

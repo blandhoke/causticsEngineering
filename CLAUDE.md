@@ -267,11 +267,11 @@ Algorithm:
   5. Normalize, sqrt gamma, plot with sunlight colormap
   6. Optional: scipy gaussian_filter(sigma=0.5) post-process smooth
 
-Orientation: BOTH flips required for correct output:
-  img = np.flipud(np.fliplr(accum.copy()))
-  np.fliplr alone is WRONG — confirmed to produce Y-inverted caustic (all pre-2026-03-16 renders).
-  Both flips are applied in: simulate_cow2_fresh.py, simulate_befuddled_v5.py,
-  simulate_hyper.py, simulate_fast.py, simulate_normal.py, simulate_cow.py, simulate_circle.py
+Orientation: horizontal mirror ONLY — do NOT apply flipud:
+  img = np.fliplr(accum.copy())
+  flipud was tried 2026-03-16 and CONFIRMED WRONG — it inverted the cow vertically.
+  The horizontal mirror (fliplr) is physically correct for a refractive lens.
+  Applied in all simulate_*.py scripts.
 
 Parameters (confirmed working):
   N_PASSES     = 4        <- do not reduce; 4x jitter is minimum for clean output

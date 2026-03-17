@@ -201,7 +201,7 @@ else:
 
 # ── Plot ───────────────────────────────────────────────────────────────────────
 print("Rendering image...")
-img = np.flipud(np.fliplr(accum.copy()))   # correct horizontal + vertical orientation
+img = np.fliplr(accum.copy())   # horizontal mirror only — flipud confirmed wrong (2026-03-16)
 if img.max() > 0:
     img /= img.max()
 img = np.sqrt(img)   # gamma ≈ 2

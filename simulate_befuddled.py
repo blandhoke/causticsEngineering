@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
 """
+simulate_befuddled.py — OUTDATED — DO NOT USE
+
+BUGS in this script:
+  FOCAL_DIST = 0.2  (should be 0.75 — root cause of v4 washed-out output)
+  SPLAT_SIGMA = 1.5  (should be 0.75 for 1024px / 2.1M face mesh)
+
+Use simulate_befuddled_v5.py instead.
+This file is kept for historical reference only.
+"""
+raise RuntimeError(
+    "simulate_befuddled.py is OUTDATED (FOCAL_DIST=0.2 bug).\n"
+    "Use simulate_befuddled_v5.py instead."
+)
+"""  # historical code below — do not run
+
 simulate_befuddled.py — Forward ray trace for the befuddled cow target.
 
 First run: traces rays through examples/original_image.obj, saves to befuddled_accum.npy.

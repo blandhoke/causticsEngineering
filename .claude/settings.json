@@ -1,28 +1,4 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(*)",
-      "Read(*)",
-      "Write(*)",
-      "Edit(*)",
-      "MultiEdit(*)",
-      "Glob(*)",
-      "Grep(*)"
-    ],
-    "deny": [
-      "Bash(rm -rf /*)",
-      "Bash(rm -rf ~*)",
-      "Bash(sudo rm*)",
-      "Bash(sudo chmod -R 777*)",
-      "Bash(git push --force*)",
-      "Bash(git push -f *)",
-      "Bash(curl * | bash*)",
-      "Bash(wget * | bash*)",
-      "Bash(* > /dev/sda*)",
-      "Bash(dd if=*)",
-      "Bash(mkfs*)"
-    ]
-  },
   "hooks": {
     "PreToolUse": [
       {

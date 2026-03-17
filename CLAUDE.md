@@ -1,7 +1,7 @@
 # CLAUDE.md — CausticsEngineering
-# Auto-accept all edits unless flagged CONFIRM REQUIRED.
+# Project-specific rules. Behavioral defaults live in ~/.claude/CLAUDE.md (global).
+# Where both files address the same rule, this file takes precedence.
 # Last updated: 2026-03-16
-# Written by: Claude Chat (Sonnet 4.6) via filesystem MCP + Claude Code sessions
 
 ---
 
@@ -61,9 +61,21 @@ evaluate is not caution — it is just friction. Default to action.
   - Running analysis scripts
 
 ### ASK ONCE — one confirmation, then proceed immediately:
-  - bash start_julia.sh (runs julia solver — ~9 min, overwrites original_image.obj)
-    Say: "About to run the Julia solver — this takes ~9 min and will overwrite
-    the current lens mesh. OK to proceed?"
+
+  CRITICAL RULE: Every ASK ONCE prompt MUST begin with the exact phrase:
+    "⚠ THIS IS SUPER CRITICAL ⚠"
+  followed by a one-sentence explanation of what will be destroyed or overwritten
+  and why it cannot be undone. This signals to the user that they must stop,
+  check that no other terminal is running a conflicting operation, and confirm
+  deliberately. Do NOT bury the ask in a paragraph. Put it on its own line.
+
+  Example format:
+    ⚠ THIS IS SUPER CRITICAL ⚠
+    About to run the Julia solver — this takes ~45 min and will permanently
+    overwrite examples/original_image.obj. OK to proceed?
+
+  Triggers:
+  - bash start_julia.sh (runs julia solver — ~45 min, overwrites original_image.obj)
   - Any operation that touches files OUTSIDE /Users/admin/causticsEngineering/
   - Changing focalLength in create_mesh.jl (affects dome height and throw distance)
   - Changing artifactSize in create_mesh.jl (affects physical lens dimensions)
@@ -134,10 +146,15 @@ NEVER apply her settings to this project.
     "befuddled cow 1.jpg"           <- user's Photoshop-curated input (DO NOT MODIFY)
     "cow render.jpg"                <- original cow photo (do not delete)
     caustic_simulated.png           <- water drop reference (DO NOT OVERWRITE -- ever)
+    caustic_accum.npy               <- ray trace cache for water drop (simulate_caustic.py)
+    caustic_meta.npy                <- bounds cache for water drop reference
+    caustic_cow.png                 <- early cow v1 render (historical, no cache, do not delete)
     caustic_cow_v2.png              <- cow v2, centroid ray (reference)
     caustic_cow_v3.png              <- cow v3, 4-pass Gaussian splat (DO NOT OVERWRITE)
     cow_accum.npy                   <- ray trace cache for cow v3 (DO NOT DELETE)
     cow_meta.npy                    <- bounds cache for cow v3 (DO NOT DELETE)
+    circle_accum.npy                <- ray trace cache for circle test (simulate_circle.py)
+    circle_meta.npy                 <- bounds cache for circle test
     befuddled_v5_accum.npy          <- ray trace cache for befuddled v5 (f=0.75, sigma=0.75)
     befuddled_v5_meta.npy           <- bounds cache for befuddled v5
     caustic_befuddled_v1.png        <- befuddled f=0.2m render (reference, do not delete)
@@ -146,8 +163,9 @@ NEVER apply her settings to this project.
     physical_lens_8x8.obj           <- CNC-ready scaled OBJ (8"x8", dome 25.22mm, throw 30")
   simulate_cow.py                   <- cow v3 ray trace (DO NOT MODIFY -- it's the template)
   simulate_befuddled_v5.py          <- current active befuddled script (f=0.75, sigma=0.75)
-  simulate_befuddled.py             <- OUTDATED (FOCAL_DIST=0.2 bug) -- do not use
+  simulate_befuddled.py             <- OUTDATED (FOCAL_DIST=0.2 bug) — raises RuntimeError if run
   simulate_caustic.py               <- water drop reference script (do not modify)
+  simulate_circle.py                <- circle test script (reference)
   verify_obj.py                     <- OBJ geometry validator (exits 0 on pass)
   make_physical_lens.py             <- physical CNC scaler (writes physical_lens_8x8.obj)
 

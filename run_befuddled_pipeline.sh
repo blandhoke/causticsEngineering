@@ -3,6 +3,9 @@
 # Full autonomous pipeline: Julia solver → OBJ verify → ray trace →
 # physical scaling → analysis → git commit
 # All output is tee'd to logs/ so nothing is lost.
+#
+# NOTE: Step 6 (Julia solver) uses start_julia.sh for background launch + logging.
+#       After launching, wait for it to finish before continuing.
 set -e   # exit on any error
 
 cd /Users/admin/causticsEngineering
@@ -14,8 +17,10 @@ echo_ts() { echo "[$(date '+%H:%M:%S')] $*"; }
 echo_ts "═══ BEFUDDLED COW PIPELINE START ═══"
 
 # ── Step 6: Julia solver ──────────────────────────────────────────────────────
-echo_ts "Step 6: Running Julia solver (this takes ~45 min for 1024px)..."
-julia run.jl 2>&1 | tee "$LOGS/julia_befuddled.log"
+echo_ts "Step 6: Launching Julia solver via start_julia.sh (background, ~45 min for 1024px)..."
+bash start_julia.sh
+echo_ts "Waiting for Julia solver to complete..."
+while bash check_julia.sh; do sleep 30; done
 echo_ts "Step 6 complete."
 
 # ── Step 7: Verify OBJ ───────────────────────────────────────────────────────
@@ -25,7 +30,7 @@ echo_ts "Step 7 complete."
 
 # ── Step 9: Forward ray trace ────────────────────────────────────────────────
 echo_ts "Step 9: Running forward ray trace (4-pass, ~35 min)..."
-python3 simulate_befuddled.py 2>&1 | tee "$LOGS/raytrace_befuddled.log"
+python3 simulate_befuddled_v5.py 2>&1 | tee "$LOGS/raytrace_befuddled.log"
 echo_ts "Step 9 complete."
 
 # ── Step 10: Physical lens scaling ───────────────────────────────────────────

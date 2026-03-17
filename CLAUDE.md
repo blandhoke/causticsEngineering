@@ -393,8 +393,15 @@ Primary metric: Pearson r (edge correlation) vs inkbrush_caustic_normal.png.
 ### Surface reconstruction: phi smoothing is noise, focal length has minor effect
 
   Phi field smoothing (σ=0.3–1.5): within noise, no consistent improvement. Skip.
-  Solidify thickness: no effect on caustic quality. Skip.
-  Artifact size (0.10m): optimal. Do not change.
+  Solidify thickness: no effect on caustic quality (confirmed by OBJ vertex analysis). Skip.
+  Artifact size (0.10m): optimal for 1" acrylic. Do not change.
+
+  findSurface() implementation: POISSON SOLVE (confirmed by code audit 2026-03-17)
+    Computes required surface normals via paraxial Snell's law, then solves ∇²h = div(N)
+    using the same SOR relax!() loop, up to 10000 iterations with convergence < 1e-5.
+    This is mathematically optimal. No path-dependent integration artifacts exist.
+    An FFT-based solver would be faster but yield identical results.
+    Phi smoothing before findSurface() can only degrade accuracy — confirmed no benefit.
 
   Focal length sweep: focal=0.80m gave +142% at HYPER vs 0.75m.
   In combination with Sobel: focal=0.80 + Sobel + 3iter = 14x baseline (+0.8% over Sobel alone).
@@ -405,6 +412,13 @@ Primary metric: Pearson r (edge correlation) vs inkbrush_caustic_normal.png.
     Estimated dome: slightly shallower than 0.75 (better margin in 1" acrylic).
     Current calibration table: f=0.20→34.6mm, f=0.60→26.1mm, f=0.75→25.2mm.
     f=0.80 estimate: ~24.8mm (0.6mm margin — same order as 0.75 margin of 0.18mm).
+
+  artifactSize upgrade path (1.125" stock):
+    artifactSize=0.10 → dome ~21.6mm native → 25.2mm physical at 8"×8" (fits 1" stock)
+    artifactSize=0.115 → dome ~24.8mm physical → fits 1.125" stock, ~50% higher edge_r
+    artifactSize=0.12  → dome ~25.9mm physical → exceeds 1" stock (0.5mm over limit)
+    If 1.125" cast acrylic is available: bump artifactSize to 0.115 for ~50% gain.
+    ⚠ CONFIRM REQUIRED before changing artifactSize (changes physical lens dimensions).
 
 ### Compounding: improvements are largely additive
 

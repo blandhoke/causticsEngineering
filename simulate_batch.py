@@ -34,21 +34,21 @@ parser.add_argument('--accum',      required=True)
 parser.add_argument('--meta',       required=True)
 parser.add_argument('--output',     required=True)
 parser.add_argument('--label',      default='caustic')
-parser.add_argument('--passes',     type=int,   default=4)
+parser.add_argument('--passes',     type=int,   default=16)
 parser.add_argument('--focal',      type=float, default=0.75)
 parser.add_argument('--ior',        type=float, default=1.49)
 parser.add_argument('--res',        type=int,   default=512)
 parser.add_argument('--sigma',      type=float, default=None,
                     help='Override auto-sigma. Default: 1.5*sqrt(525000/top_faces)')
-parser.add_argument('--post-sigma', type=float, default=0.5, dest='post_sigma',
+parser.add_argument('--post-sigma', type=float, default=0.0, dest='post_sigma',
                     help='Post-process gaussian_filter sigma. 0.0 to disable.')
 parser.add_argument('--interp',     default='nearest',
                     choices=['bilinear', 'nearest'],
                     help='matplotlib imshow interpolation (default: nearest)')
-parser.add_argument('--gamma',      type=float, default=0.5,
-                    help='Gamma power applied to normalized accumulator (default: 0.5 = sqrt)')
-parser.add_argument('--unsharp',    action='store_true',
-                    help='Apply unsharp mask (radius=1, amount=1.5) after gamma')
+parser.add_argument('--gamma',      type=float, default=0.70,
+                    help='Gamma power applied to normalized accumulator (default: 0.70)')
+parser.add_argument('--unsharp',    type=float, default=0.0,
+                    help='Unsharp mask amount (0.0=disabled). Applied before gamma on linear accum.')
 args = parser.parse_args()
 
 OBJ_PATH    = Path(args.obj)
@@ -64,7 +64,7 @@ SIGMA_OVR   = args.sigma
 POST_SIGMA  = args.post_sigma
 INTERP      = args.interp
 GAMMA       = args.gamma
-UNSHARP     = args.unsharp
+UNSHARP     = args.unsharp   # float; 0.0 = disabled
 BATCH_SIZE  = 100_000
 
 CMAP = LinearSegmentedColormap.from_list('sunlight', [
@@ -197,13 +197,27 @@ else:
     np.save(META_PATH,  np.array([xmin, xmax, ymin, ymax]))
 
 # ── Render ─────────────────────────────────────────────────────────────────────
+sigma_label = f"{SIGMA_OVR:.3f} (manual)" if SIGMA_OVR is not None else "auto"
+print(f"[{LABEL}] Parameters: sigma={sigma_label}  passes={N_PASSES}  gamma={GAMMA}"
+      f"  post-sigma={POST_SIGMA}  interp={INTERP}  unsharp={UNSHARP}")
+
 img = np.fliplr(accum.copy())
 if img.max() > 0: img /= img.max()
+
+# Unsharp mask — applied BEFORE gamma on linear normalized accumulator
+if UNSHARP > 0.0:
+    try:
+        from scipy.ndimage import gaussian_filter as _gf
+        _blurred = _gf(img, sigma=3.0)
+        img = np.clip(img + UNSHARP * (img - _blurred), 0.0, 1.0)
+        print(f"[{LABEL}] Unsharp mask: sigma=3.0, amount={UNSHARP} (pre-gamma)")
+    except ImportError:
+        pass
 
 # Gamma
 img = np.power(img, GAMMA)
 
-# Post-process blur (0.0 = disabled)
+# Post-process blur (0.0 = disabled; default is now 0.0)
 if POST_SIGMA > 0.0:
     try:
         from scipy.ndimage import gaussian_filter
@@ -211,20 +225,6 @@ if POST_SIGMA > 0.0:
         print(f"[{LABEL}] Post-blur: sigma={POST_SIGMA}")
     except ImportError:
         pass
-else:
-    print(f"[{LABEL}] Post-blur: disabled")
-
-# Unsharp mask (optional)
-if UNSHARP:
-    try:
-        from scipy.ndimage import gaussian_filter
-        blurred = gaussian_filter(img, sigma=1.0)
-        img = np.clip(img + 1.5 * (img - blurred), 0.0, 1.0)
-        print(f"[{LABEL}] Unsharp mask: radius=1, amount=1.5")
-    except ImportError:
-        pass
-
-print(f"[{LABEL}] Render: gamma={GAMMA}  interp={INTERP}  post_sigma={POST_SIGMA}  unsharp={UNSHARP}")
 
 fig, ax = plt.subplots(figsize=(8, 8), facecolor='black')
 ax.imshow(img, cmap=CMAP, origin='upper', interpolation=INTERP)

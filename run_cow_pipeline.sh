@@ -63,3 +63,10 @@ echo "  Ray trace: ${TRACE_TIME}s"
 TOTAL=$((T4-T1))
 echo "=== DONE: ${SLUG}/${SPEED} in ${TOTAL}s ==="
 echo "TIMING: Julia=${JULIA_TIME}s RayTrace=${TRACE_TIME}s Total=${TOTAL}s" >> "$OUT_DIR/run.log"
+
+# Auto-deposit Claude Chat-readable PNG in handoff4/
+echo "Step 3: Resizing for Claude Chat..."
+python3 "${PROJECT}/cc_resize.py" \
+  "${OUT_DIR}/caustic.png" \
+  --out "${PROJECT}/claude_chat_handoff4/${SLUG}_${SPEED}.png" \
+  2>&1 | tee -a "$OUT_DIR/run.log"

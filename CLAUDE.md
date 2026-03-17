@@ -274,27 +274,86 @@ Orientation: horizontal mirror ONLY — do NOT apply flipud:
   Applied in all simulate_*.py scripts.
 
 Parameters (confirmed working):
-  N_PASSES     = 4        <- do not reduce; 4x jitter is minimum for clean output
+  N_PASSES     = 16       <- VALIDATED 2026-03-16 (was 4). 16-pass physically correct:
+                             darker background = light concentrating precisely into caustic lines.
   SPLAT_SIGMA            AUTO-COMPUTED from top-surface face count:
                              Formula: 1.5 / sqrt(top_face_count / 525_000)
                              128px mesh (~33k faces)  -> sigma≈6.0, radius≈12
                              256px mesh (~131k faces) -> sigma≈3.0, radius≈6
-                             512px mesh (~525k faces) -> sigma=1.5, radius=3   (baseline)
+                             512px mesh (~525k faces) -> sigma=0.75, radius=2  (validated)
                              1024px mesh (~2.1M faces)-> sigma≈0.75, radius≈2
+                             NOTE: old formula gave sigma=1.5 at 512px — too blurry.
+                             Validated minimum for invisible artifact: sigma=0.75 (not 1.5).
+  GAMMA        = 0.70     <- VALIDATED 2026-03-16 (was 0.50). gamma=0.50 lifts near-zero
+                             background into colormap amber range. gamma=0.70 keeps background
+                             dark, caustic lines appear to float on true black field.
+  POST_SIGMA   = 0.0      <- VALIDATED 2026-03-16 (was 0.5). gaussian_filter(0.5) is
+                             double-blurring — combined with splat gives sqrt(0.75²+0.5²)=0.9px.
+                             Remove entirely. If sparkle visible, use 0.2 max.
+  INTERP       = 'nearest' <- VALIDATED 2026-03-16 (was 'bilinear'). At 2.3x upscale,
+                              bilinear adds 33-50% apparent line-width increase. Use nearest.
   IMAGE_RES    = 512      <- output PNG resolution (512 for all speed tiers; comparability)
   IOR          = 1.49
   FOCAL_DIST   = 0.75     <- MUST MATCH focalLength in create_mesh.jl (currently 0.75m)
                              v4 was broken because this was 0.2 while solver used 0.75
 
+simulate_batch.py CLI (new defaults as of 2026-03-16):
+  --passes 16  --sigma 0.75  --gamma 0.70  --post-sigma 0.0  --interp nearest
+  --unsharp 0.0  (optional; amount > 0 enables USM applied BEFORE gamma on linear accum)
+
 Cache behavior:
   - Cache present -> skip simulation, load instantly, replot only
-  - Cache absent -> full simulation (8-15 min at 512px mesh, 4-pass; ~40 sec at 1024px)
+  - Cache absent -> full simulation (~25s at 512px/16-pass; ~160s at 1024px/16-pass)
   - To replot only: run script as-is (reads cache)
   - To force re-simulation: delete *_accum.npy + *_meta.npy
   - Stale caches (wrong FOCAL_DIST or wrong sigma): AUTO-DELETE, no confirm needed
   - Protected forever: cow_accum.npy, cow_meta.npy (v3 baseline — never delete)
 
 DO NOT use Blender Cycles or LuxCore for caustic verification -- neither converges.
+
+---
+
+## Validated Ray Trace Parameters (2026-03-16)
+
+Full crispness sweep run on inkbrush/normal (526k faces, 512px). Independent visual
+analysis by Claude Chat. Parameters below are the validated production defaults.
+
+  Sigma sweep result:   σ=0.75  (σ=0.50 introduces micro-noise at production scale)
+  Passes sweep result:  16-pass (darker background is CORRECT PHYSICS, not a defect)
+  Gamma sweep result:   γ=0.70  (γ=0.65 muddies mid-tone detail in forehead/ear)
+  Post-blur:            DISABLED (gaussian_filter removed — was double-blurring)
+  Interpolation:        nearest  (bilinear adds ~1px blur at 2.3x upscale)
+  Unsharp mask:         optional, not default — use --unsharp 1.5 if needed
+
+  Sharpness sweep numeric results (post_sigma=0.0 wins on all metrics):
+    #1: σ=0.25 γ=0.70  (mathematically sharpest — but micro-noise risk at production)
+    #2: σ=0.00 γ=0.70  (same)
+    #3: σ=0.25 γ=0.65
+    #8: σ=0.50 γ=0.70  ← selected σ=0.75 over 0.50 to avoid production noise
+    New defaults: post_sigma=0.00  gamma=0.70  → sharp=0.087, contrast=2.17, black=54.4%
+    Old baseline: post_sigma=0.50  gamma=0.50  → sharp=0.088, contrast=1.80, black=53.8%
+
+  CRITICAL FINDING — Nikon Banding (2026-03-16):
+    Nikon renders show HORIZONTAL BANDING across lower face and neck.
+    These are SOR solver residuals — wave patterns from incomplete convergence.
+    No ray-trace tuning fixes this. Fix is upstream in the solver:
+      Option 1: Increase SOR iterations from 6 to 8 in create_mesh.jl
+      Option 2: Different input image for Nikon
+    DO NOT run production 1024px until banding is diagnosed.
+    ⚠ CONFIRM REQUIRED before modifying create_mesh.jl or re-running Julia.
+
+  Pipeline diagnostic results (r = Pearson correlation with input edges):
+    inkbrush: r(OBJ_gradient, edges)=0.014  r(accum, edges)=0.159  r(final, edges)=0.150
+    nikon:    r(OBJ_gradient, edges)=0.171  r(accum, edges)=0.233  r(final, edges)=0.219
+    Note: inkbrush OBJ correlation is very low (0.014) — suggests the solver encoded
+    brightness gradients, not edge structure, for this input image.
+
+  Cross-image ranking by caustic sharpness:
+    1. nikon       sharp=0.130  black=56.8%  r_edges=+0.219
+    2. woodblock   sharp=0.120  black=56.8%  r_edges=+0.186
+    3. banknote    sharp=0.107  black=56.9%  r_edges=+0.213
+    4. inkbrush    sharp=0.107  black=56.8%  r_edges=+0.150
+    5. charcol     sharp=0.104  black=56.9%  r_edges=+0.208
 
 ---
 

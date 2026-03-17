@@ -6,6 +6,18 @@ All paths passed as CLI arguments. No hardcoded paths. Auto-sigma from face coun
 Usage:
   python3 simulate_batch.py --obj path/to/mesh.obj --accum path/accum.npy \
       --meta path/meta.npy --output path/caustic.png --label "slug (speed)"
+
+Crispness controls (all optional):
+  --sigma       override auto-sigma (float; default: auto from face count)
+  --post-sigma  gaussian_filter sigma after render (float; 0.0 = disabled; default: 0.5)
+  --interp      matplotlib interpolation: 'bilinear' or 'nearest' (default: 'nearest')
+  --gamma       gamma power applied to normalized accumulator (float; default: 0.5)
+  --passes      N_PASSES (int; default: 4)
+
+Cache invalidation:
+  Cache is physics-dependent (sigma, passes, focal, ior, res).
+  Post-process params (post-sigma, interp, gamma) never require cache regeneration.
+  Delete accum.npy + meta.npy to force re-simulation.
 """
 
 import argparse
@@ -17,15 +29,26 @@ from matplotlib.colors import LinearSegmentedColormap
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--obj',    required=True)
-parser.add_argument('--accum',  required=True)
-parser.add_argument('--meta',   required=True)
-parser.add_argument('--output', required=True)
-parser.add_argument('--label',  default='caustic')
-parser.add_argument('--passes', type=int,   default=4)
-parser.add_argument('--focal',  type=float, default=0.75)
-parser.add_argument('--ior',    type=float, default=1.49)
-parser.add_argument('--res',    type=int,   default=512)
+parser.add_argument('--obj',        required=True)
+parser.add_argument('--accum',      required=True)
+parser.add_argument('--meta',       required=True)
+parser.add_argument('--output',     required=True)
+parser.add_argument('--label',      default='caustic')
+parser.add_argument('--passes',     type=int,   default=4)
+parser.add_argument('--focal',      type=float, default=0.75)
+parser.add_argument('--ior',        type=float, default=1.49)
+parser.add_argument('--res',        type=int,   default=512)
+parser.add_argument('--sigma',      type=float, default=None,
+                    help='Override auto-sigma. Default: 1.5*sqrt(525000/top_faces)')
+parser.add_argument('--post-sigma', type=float, default=0.5, dest='post_sigma',
+                    help='Post-process gaussian_filter sigma. 0.0 to disable.')
+parser.add_argument('--interp',     default='nearest',
+                    choices=['bilinear', 'nearest'],
+                    help='matplotlib imshow interpolation (default: nearest)')
+parser.add_argument('--gamma',      type=float, default=0.5,
+                    help='Gamma power applied to normalized accumulator (default: 0.5 = sqrt)')
+parser.add_argument('--unsharp',    action='store_true',
+                    help='Apply unsharp mask (radius=1, amount=1.5) after gamma')
 args = parser.parse_args()
 
 OBJ_PATH    = Path(args.obj)
@@ -37,6 +60,11 @@ N_PASSES    = args.passes
 FOCAL_DIST  = args.focal
 IOR         = args.ior
 IMAGE_RES   = args.res
+SIGMA_OVR   = args.sigma
+POST_SIGMA  = args.post_sigma
+INTERP      = args.interp
+GAMMA       = args.gamma
+UNSHARP     = args.unsharp
 BATCH_SIZE  = 100_000
 
 CMAP = LinearSegmentedColormap.from_list('sunlight', [
@@ -58,7 +86,7 @@ def refract_batch(d, n_hat, n_ratio):
     return d_out, valid
 
 if ACCUM_PATH.exists() and META_PATH.exists():
-    print(f"[{LABEL}] Loading cache: {ACCUM_PATH}")
+    print(f"[{LABEL}] Loading cache: {ACCUM_PATH.name}")
     accum = np.load(ACCUM_PATH)
     meta  = np.load(META_PATH)
     xmin, xmax, ymin, ymax = meta
@@ -76,9 +104,15 @@ else:
     raw_n_all = np.cross(v1r - v0r, v2r - v0r)
     top_idx   = np.where(raw_n_all[:, 2] > 0)[0]
     n_top     = len(top_idx)
-    splat_sigma  = 1.5 * np.sqrt(525_000 / max(n_top, 1))
-    splat_radius = max(2, int(round(splat_sigma * 1.5)))
-    print(f"[{LABEL}]   top_faces={n_top:,}  sigma={splat_sigma:.3f}  radius={splat_radius}")
+
+    if SIGMA_OVR is not None:
+        splat_sigma  = SIGMA_OVR
+        splat_radius = max(1, int(round(splat_sigma * 2)))
+        print(f"[{LABEL}]   top_faces={n_top:,}  sigma={splat_sigma:.3f} (override)  radius={splat_radius}")
+    else:
+        splat_sigma  = 1.5 * np.sqrt(525_000 / max(n_top, 1))
+        splat_radius = max(2, int(round(splat_sigma * 1.5)))
+        print(f"[{LABEL}]   top_faces={n_top:,}  sigma={splat_sigma:.3f} (auto)  radius={splat_radius}")
 
     z_min, z_max = verts[:, 2].min(), verts[:, 2].max()
     cx = (verts[:, 0].min() + verts[:, 0].max()) / 2
@@ -86,7 +120,7 @@ else:
     lens_span = max(verts[:,0].max()-verts[:,0].min(), verts[:,1].max()-verts[:,1].min())
     light_pos = np.array([cx, cy, z_max + FOCAL_DIST])
     plane_z   = z_min - FOCAL_DIST
-    print(f"[{LABEL}]   dome={( z_max-z_min)*1000:.2f}mm  light_z={light_pos[2]:.4f}  plane_z={plane_z:.4f}")
+    print(f"[{LABEL}]   dome={(z_max-z_min)*1000:.2f}mm  light_z={light_pos[2]:.4f}  plane_z={plane_z:.4f}")
 
     pad  = lens_span * 1.5
     xmin, xmax = cx - pad, cx + pad
@@ -97,7 +131,7 @@ else:
     kernel = {(dy, dx): np.exp(-(dx**2 + dy**2) / (2 * splat_sigma**2))
               for dy in ks for dx in ks}
 
-    print(f"[{LABEL}] Tracing {N_PASSES} passes ...")
+    print(f"[{LABEL}] Tracing {N_PASSES} passes (sigma={splat_sigma:.3f} radius={splat_radius}) ...")
     n_hit_total = 0
     total = n_top
     np.random.seed(42)
@@ -162,21 +196,40 @@ else:
     np.save(ACCUM_PATH, accum)
     np.save(META_PATH,  np.array([xmin, xmax, ymin, ymax]))
 
-# Render
+# ── Render ─────────────────────────────────────────────────────────────────────
 img = np.fliplr(accum.copy())
 if img.max() > 0: img /= img.max()
-img = np.sqrt(img)
-try:
-    from scipy.ndimage import gaussian_filter
-    img = gaussian_filter(img, sigma=0.5)
-except ImportError:
-    pass
+
+# Gamma
+img = np.power(img, GAMMA)
+
+# Post-process blur (0.0 = disabled)
+if POST_SIGMA > 0.0:
+    try:
+        from scipy.ndimage import gaussian_filter
+        img = gaussian_filter(img, sigma=POST_SIGMA)
+        print(f"[{LABEL}] Post-blur: sigma={POST_SIGMA}")
+    except ImportError:
+        pass
+else:
+    print(f"[{LABEL}] Post-blur: disabled")
+
+# Unsharp mask (optional)
+if UNSHARP:
+    try:
+        from scipy.ndimage import gaussian_filter
+        blurred = gaussian_filter(img, sigma=1.0)
+        img = np.clip(img + 1.5 * (img - blurred), 0.0, 1.0)
+        print(f"[{LABEL}] Unsharp mask: radius=1, amount=1.5")
+    except ImportError:
+        pass
+
+print(f"[{LABEL}] Render: gamma={GAMMA}  interp={INTERP}  post_sigma={POST_SIGMA}  unsharp={UNSHARP}")
 
 fig, ax = plt.subplots(figsize=(8, 8), facecolor='black')
-ax.imshow(img, cmap=CMAP, origin='upper', interpolation='bilinear')
+ax.imshow(img, cmap=CMAP, origin='upper', interpolation=INTERP)
 ax.set_facecolor('black')
 for spine in ax.spines.values(): spine.set_edgecolor('#444')
-ax.tick_params(colors='#aaa'); ax.xaxis.label.set_color('#aaa'); ax.yaxis.label.set_color('#aaa')
 ax.set_title(LABEL, color='#ddd', fontsize=11)
 ax.axis('off')
 plt.tight_layout(pad=0.3)

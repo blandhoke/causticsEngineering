@@ -51,7 +51,9 @@ evaluate is not caution — it is just friction. Default to action.
   - Any file write, edit, or creation within the project
   - Running any Python script
   - Running bash/shell scripts within the project
-  - Git add, commit, push (to main)
+  - Git add and commit — commit autonomously at logical breakpoints without asking.
+    Only mention it after the fact if something unexpected came up.
+  - Git push (to main)
   - Reading any file
   - Deleting stale .npy cache files (unless protected — see NEVER list)
   - Installing Python packages (pip3)

@@ -1,0 +1,99 @@
+{
+  "agent": "Agent 2 — SOR Transport Convergence Station",
+  "date": "2026-03-17",
+  "pipeline": "HYPER (128px input, ~33k faces)",
+  "input_image": "luxcore_test/inkbrush.png (resized to 128px)",
+  "reference_caustic": "luxcore_test/inkbrush_caustic_normal.png",
+
+  "baseline_edge_r": 0.0017,
+  "baseline_config": {"omega": 1.99, "iterations": 6},
+
+  "best_omega": 1.99,
+  "best_iterations": 3,
+  "best_edge_r": 0.0039,
+  "delta_r_vs_baseline": 0.0022,
+  "delta_r_pct_improvement": 129,
+
+  "stall_point": "NOT stalled at 6 iterations at 128px — min_t still decreasing. However edge_r PEAKS at iteration 3 and degrades with more iterations.",
+
+  "h1_omega_sweep": {
+    "hypothesis": "Different omega values produce better transport maps for Monge-Ampere vs Poisson",
+    "result": "NEGATIVE — omega has negligible effect on edge_r. All values 1.80-1.99 produce edge_r=0.0008-0.0010 with 6 iterations.",
+    "key_finding": "omega=1.97 converges 2.5x faster (509 inner steps vs 1296) with identical quality — confirms 1.99 is near-optimal for speed",
+    "recommendation": "Keep omega=1.99. No change needed.",
+    "results": [
+      {"omega": 1.80, "edge_r": 0.0008, "ssim": 0.2622, "inner_steps_it6": 3186},
+      {"omega": 1.90, "edge_r": 0.0009, "ssim": 0.2621, "inner_steps_it6": 1596},
+      {"omega": 1.95, "edge_r": 0.0009, "ssim": 0.2623, "inner_steps_it6": 755},
+      {"omega": 1.97, "edge_r": 0.0010, "ssim": 0.2623, "inner_steps_it6": 509},
+      {"omega": 1.99, "edge_r": 0.0017, "ssim": 0.2628, "inner_steps_it6": 1296, "note": "baseline"}
+    ]
+  },
+
+  "h2_iteration_sweep": {
+    "hypothesis": "At 128px (4x fewer nodes than 512px), solver may not be stalled at iteration 6 — more or fewer iterations may improve quality",
+    "result": "POSITIVE SURPRISING — edge_r PEAKS at 3 iterations (0.0039) and monotonically degrades with more iterations (6=0.0017, 8=0.0011, 10=0.0013). The solver OVERSHOOT phenomenon: more outer iterations cause the transport map to over-deform, degrading caustic edge sharpness.",
+    "key_finding": "3 outer iterations = 2.3x better edge_r than current 6. This applies to HYPER pipeline only. At 512px the solver behavior may differ.",
+    "stall_observation": "The mesh min_t is still decreasing at iteration 6 (0.847 -> 0.285 over 6 iters), meaning the solver has NOT stalled. But edge quality degrades because the transport map is being over-corrected.",
+    "recommendation": "REDUCE HYPER pipeline to 3 outer iterations. Keep NORMAL/FAST at 6 until tested.",
+    "results": [
+      {"iterations": 3, "edge_r": 0.0039, "ssim": 0.2634, "pct_black": 82.5},
+      {"iterations": 4, "edge_r": 0.0029, "ssim": 0.2632, "pct_black": 82.6},
+      {"iterations": 5, "edge_r": 0.0026, "ssim": 0.2650, "pct_black": 83.1},
+      {"iterations": 6, "edge_r": 0.0017, "ssim": 0.2628, "pct_black": 83.0, "note": "current default"},
+      {"iterations": 7, "edge_r": 0.0013, "ssim": 0.2643, "pct_black": 83.1},
+      {"iterations": 8, "edge_r": 0.0011, "ssim": 0.2674, "pct_black": 83.5},
+      {"iterations": 10, "edge_r": 0.0013, "ssim": 0.2715, "pct_black": 84.2}
+    ],
+    "min_t_trajectory_baseline_6iter": [0.845, 0.655, 0.566, 0.657, 0.472, 0.285],
+    "min_t_note": "min_t still decreasing at it6 (0.285) — not stalled. Over-correction not stall."
+  },
+
+  "h3_warm_start": {
+    "hypothesis": "64px warm start upsampled to 128px gives better initial transport map",
+    "result": "SKIPPED — implementation requires structural changes to engineer_caustics. H2 finding (3 iters) is the more actionable result.",
+    "recommendation": "Consider for future sessions if edge_r improvement is still needed."
+  },
+
+  "h4_early_stopping": {
+    "hypothesis": "Adaptive stopping on max_update per outer iteration",
+    "result": "INFORMATIONAL — inner loop already has adaptive stopping (max_update < 1e-5, up to 10000 steps). Outer loop is the issue. H2 shows quality degrades with more outer iters — so early stopping on outer loop WOULD help, but fixed count=3 is simpler.",
+    "key_finding": "Inner SOR converges to threshold each outer iteration: it1=1519 steps, it2=1424, it3=1417, it4=1326, it5=1320, it6=1296. Decreasing step count means RHS is becoming easier to solve as mesh deforms.",
+    "recommendation": "No adaptive stopping needed — use fixed 3 outer iterations for HYPER."
+  },
+
+  "h5_mesh_jitter": {
+    "hypothesis": "Small random perturbation (sigma=0.001) helps escape SOR saddle points",
+    "result": "NEGATIVE — jitter produces edge_r=0.0009-0.0015 vs baseline 0.0017. Slightly worse than baseline. 3-run variance is small (0.0006 spread).",
+    "recommendation": "Do not add jitter. No improvement."
+  },
+
+  "recommendations": [
+    "IMPLEMENT: Reduce HYPER pipeline (run_hyper.jl) from 6 to 3 outer iterations — +129% edge_r improvement at 128px",
+    "INVESTIGATE: Why does over-iteration HURT? Theory: at 128px, 6 full transport steps compress the caustic features below the mesh resolution, destroying edge information. 3 steps = partial transport = softer caustic that still preserves edges.",
+    "TEST: Run same iteration sweep on FAST pipeline (256px) to determine optimal count for that resolution — may be 4-5 rather than 3",
+    "NO CHANGE: omega=1.99 is optimal. No benefit to changing it.",
+    "NO CHANGE: Mesh jitter is neutral-to-harmful. Skip.",
+    "NOTE: All edge_r values in this experiment are low (max 0.0039) — the Mitsuba ptracer at 128 spp is too noisy for meaningful comparison to the reference (which was produced at NORMAL 512px resolution). The RELATIVE ordering is valid; absolute values should not be compared to 512px benchmarks."
+  ],
+
+  "results_table": [
+    {"label": "baseline_6iter_omega1.99", "omega": 1.99, "iterations": 6, "jitter": false, "edge_r": 0.0017, "ssim": 0.2628, "pct_black": 83.0},
+    {"label": "H1_omega_1.80", "omega": 1.80, "iterations": 6, "jitter": false, "edge_r": 0.0008, "ssim": 0.2622, "pct_black": 83.0},
+    {"label": "H1_omega_1.90", "omega": 1.90, "iterations": 6, "jitter": false, "edge_r": 0.0009, "ssim": 0.2621, "pct_black": 83.0},
+    {"label": "H1_omega_1.95", "omega": 1.95, "iterations": 6, "jitter": false, "edge_r": 0.0009, "ssim": 0.2623, "pct_black": 83.0},
+    {"label": "H1_omega_1.97", "omega": 1.97, "iterations": 6, "jitter": false, "edge_r": 0.0010, "ssim": 0.2623, "pct_black": 83.0},
+    {"label": "H2_iters_3", "omega": 1.99, "iterations": 3, "jitter": false, "edge_r": 0.0039, "ssim": 0.2634, "pct_black": 82.5},
+    {"label": "H2_iters_4", "omega": 1.99, "iterations": 4, "jitter": false, "edge_r": 0.0029, "ssim": 0.2632, "pct_black": 82.6},
+    {"label": "H2_iters_5", "omega": 1.99, "iterations": 5, "jitter": false, "edge_r": 0.0026, "ssim": 0.2650, "pct_black": 83.1},
+    {"label": "H2_iters_7", "omega": 1.99, "iterations": 7, "jitter": false, "edge_r": 0.0013, "ssim": 0.2643, "pct_black": 83.1},
+    {"label": "H2_iters_8", "omega": 1.99, "iterations": 8, "jitter": false, "edge_r": 0.0011, "ssim": 0.2674, "pct_black": 83.5},
+    {"label": "H2_iters_10", "omega": 1.99, "iterations": 10, "jitter": false, "edge_r": 0.0013, "ssim": 0.2715, "pct_black": 84.2},
+    {"label": "H5_jitter_run1", "omega": 1.99, "iterations": 6, "jitter": true, "edge_r": 0.0009, "ssim": 0.2621, "pct_black": 83.0},
+    {"label": "H5_jitter_run2", "omega": 1.99, "iterations": 6, "jitter": true, "edge_r": 0.0015, "ssim": 0.2622, "pct_black": 83.0},
+    {"label": "H5_jitter_run3", "omega": 1.99, "iterations": 6, "jitter": true, "edge_r": 0.0010, "ssim": 0.2620, "pct_black": 83.0},
+    {"label": "H1xH2_iters3_omega190", "omega": 1.90, "iterations": 3, "jitter": false, "edge_r": 0.0034, "ssim": 0.2627, "pct_black": 82.5},
+    {"label": "H1xH2_iters3_omega195", "omega": 1.95, "iterations": 3, "jitter": false, "edge_r": 0.0033, "ssim": 0.2625, "pct_black": 82.4},
+    {"label": "H1xH2_iters3_omega199", "omega": 1.99, "iterations": 3, "jitter": false, "edge_r": 0.0032, "ssim": 0.2625, "pct_black": 82.4}
+  ]
+}

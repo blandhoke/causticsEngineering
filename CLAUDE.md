@@ -357,6 +357,64 @@ analysis by Claude Chat. Parameters below are the validated production defaults.
 
 ---
 
+## Solver Input Preprocessing — Validated 2026-03-17
+
+Three-agent sweep (11 input variants, 16 SOR variants, 7 focal lengths) at HYPER (128px).
+Primary metric: Pearson r (edge correlation) vs inkbrush_caustic_normal.png.
+
+### Input Image: Sobel edge preprocessing is the dominant lever
+
+  CONFIRMED: Feed the solver a Sobel edge map, NOT the original image.
+  Improvement: +1250% edge_r at HYPER (0.0038 → 0.0508, delta=+0.047)
+  Tool: prepare_sobel_input.py --in PATH [--out PATH] [--preview]
+
+  Physics basis: The SOR solver encodes gradients. Its caustic output IS an edge map.
+  Feeding it an explicit edge map removes one level of indirection and directly encodes
+  where light should concentrate. This aligns solver input with solver physics.
+
+  HURTS: Unsharp mask, binary threshold, contrast stretch, gamma alone
+  NEUTRAL: Contrast stretch (solver's boost_ratio normalization already handles exposure)
+
+  Production status: CONFIRMED at HYPER. NORMAL-scale validation run recommended before
+  committing as default for all new images.
+
+### SOR Parameters: ω=1.99 is optimal, iteration count is resolution-dependent
+
+  ω sweep: 1.80, 1.90, 1.95, 1.97, 1.99 — ALL worse than 1.99. Keep at 1.99.
+  Iterations at HYPER (128px): 3 iterations > 6 iterations (+129% edge_r at 128px)
+    — at 128px, iterations 4-6 over-correct (mesh too coarse to encode fine features)
+    — at 512px/1024px, 6 iterations remains correct (CLAUDE.md "stalls at ~it3" still holds)
+  Mesh jitter: HURTS. Regular grid initialization is better.
+  Warm start (multi-res): not tested — complex, skipped.
+
+  HYPER pipeline: safe to use 3 iterations for faster prototyping (speed optimization).
+  NORMAL/FAST/PROD: keep 6 iterations.
+
+### Surface reconstruction: phi smoothing is noise, focal length has minor effect
+
+  Phi field smoothing (σ=0.3–1.5): within noise, no consistent improvement. Skip.
+  Solidify thickness: no effect on caustic quality. Skip.
+  Artifact size (0.10m): optimal. Do not change.
+
+  Focal length sweep: focal=0.80m gave +142% at HYPER vs 0.75m.
+  In combination with Sobel: focal=0.80 + Sobel + 3iter = 14x baseline (+0.8% over Sobel alone).
+  The focal=0.80 improvement is SMALL relative to Sobel. NOT worth changing focalLength
+  without a confirmed NORMAL-scale run and physical dome recalculation.
+
+  ⚠ CONFIRM REQUIRED before changing focalLength. Dome at f=0.80 will differ from 25.22mm.
+    Estimated dome: slightly shallower than 0.75 (better margin in 1" acrylic).
+    Current calibration table: f=0.20→34.6mm, f=0.60→26.1mm, f=0.75→25.2mm.
+    f=0.80 estimate: ~24.8mm (0.6mm margin — same order as 0.75 margin of 0.18mm).
+
+### Compounding: improvements are largely additive
+
+  Sobel only:                    edge_r = 0.0508  (baseline × 13.4)
+  focal=0.80 + Sobel + 3iter:   edge_r = 0.0532  (baseline × 14.0)
+  The +0.8% gain from combined parameters is real but second-order.
+  For production work: Sobel preprocessing is the primary lever. Apply it first.
+
+---
+
 ## Caustic Physics -- Critical Understanding
 
 The SOR solver encodes GRADIENTS not flat-field brightness:

@@ -1,0 +1,122 @@
+{
+  "agent": "Agent 3 — Surface Reconstruction & Geometry Station",
+  "run_date": "2026-03-17",
+  "mesh_resolution": "128px HYPER (~33k faces)",
+  "render_settings": "Mitsuba ptracer 128spp 256px",
+  "reference_caustic": "luxcore_test/inkbrush_caustic_normal.png",
+  "primary_metric": "pearson_r_edges (edge correlation between caustic and reference)",
+
+  "findSurface_method": "poisson_solve",
+  "findSurface_analysis": {
+    "method": "Poisson solve via SOR relaxation",
+    "detail": "findSurface() computes required surface normals (Nx, Ny) per node via paraxial Snell's law: Nx[i,j] = tan(atan(dx/dz) * 1/(n1-1)). It then takes the divergence of this field and solves nabla^2 h = div(N) using the same SOR relax!() function (up to 10000 iterations, convergence < 1e-5). This is a full Poisson solve — NOT path-dependent direct integration.",
+    "boundary_conditions": "Neumann (zero-gradient) at all four edges, enforced by the relax!() function",
+    "integration_artifact_found": false,
+    "note": "The Poisson approach already provides optimal integration quality. No systematic drift artifacts from path-dependent integration."
+  },
+
+  "solidify_analysis": {
+    "offset_parameter": "Default offset=100 (mesh coordinate units)",
+    "physical_thickness_mm": 19.53,
+    "note": "solidify() places the flat bottom at z=-offset in mesh coords. After scale (1/512 * artifactSize = 1.953e-4 m/unit), offset=100 → 19.53mm structural backing. The offset DOES NOT affect the top optical surface in any way.",
+    "affects_optics": false
+  },
+
+  "h1_phi_smoothing": {
+    "hypothesis": "Gaussian smoothing of the normal field (Nx, Ny) before divergence computation in findSurface() might reduce surface micro-roughness",
+    "test_location": "Applied to Nx, Ny matrices using Images.imfilter(Kernel.gaussian(sigma))",
+    "results": [
+      {"sigma": 0.0, "edge_r": 0.0044, "ssim": 0.2661},
+      {"sigma": 0.3, "edge_r": 0.0043, "ssim": 0.2662},
+      {"sigma": 0.5, "edge_r": 0.0046, "ssim": 0.2659},
+      {"sigma": 0.75, "edge_r": 0.0050, "ssim": 0.2662},
+      {"sigma": 1.0, "edge_r": 0.0045, "ssim": 0.2666},
+      {"sigma": 1.5, "edge_r": 0.0052, "ssim": 0.2673}
+    ],
+    "phi_smooth_sweet_spot": "no clear winner — all within noise",
+    "phi_smooth_edge_r_improvement": "negligible (<0.001 improvement at best)",
+    "conclusion": "Normal field smoothing has negligible effect on caustic quality at 128px HYPER resolution. Since findSurface() is already a Poisson solve (optimal integration), smoothing the input normals doesn't help. Not recommended for production."
+  },
+
+  "h2_focal_length": {
+    "hypothesis": "Different focalLength values change surface curvature magnitude; may have a sweet spot maximizing edge_r",
+    "note": "FOCAL_DIST in renderer always matched focalLength in solver",
+    "results": [
+      {"focal_length": 0.50, "edge_r": 0.0005, "ssim": 0.1799, "dome_mm": 21.67},
+      {"focal_length": 0.60, "edge_r": -0.0004, "ssim": 0.2152, "dome_mm": 21.64},
+      {"focal_length": 0.70, "edge_r": 0.0014, "ssim": 0.2518, "dome_mm": 21.61},
+      {"focal_length": 0.75, "edge_r": 0.0054, "ssim": 0.2661, "dome_mm": 21.61},
+      {"focal_length": 0.80, "edge_r": 0.0092, "ssim": 0.2757, "dome_mm": 21.60},
+      {"focal_length": 0.90, "edge_r": 0.0056, "ssim": 0.2995, "dome_mm": 21.58},
+      {"focal_length": 1.00, "edge_r": 0.0034, "ssim": 0.3251, "dome_mm": 21.57}
+    ],
+    "optimal_focal_length_edge_r": 0.80,
+    "optimal_focal_length_ssim": 1.00,
+    "baseline_focal_length": 0.75,
+    "dome_constraint_violated": false,
+    "key_finding": "All focal lengths produce nearly identical dome heights (~21.6mm) at 128px HYPER — the dome is dominated by the solidify offset (19.5mm) at this resolution. Edge_r peaks weakly at f=0.80 (0.0092 vs 0.0054 at f=0.75). SSIM monotonically increases with focalLength. Neither difference is large enough at 128px to justify changing the production f=0.75 setting, which was empirically validated at higher resolution for physical CNC constraints.",
+    "recommendation": "Keep focalLength=0.75 for production. The f=0.80 edge_r advantage is marginal at HYPER and was determined at a resolution 16x coarser than NORMAL."
+  },
+
+  "h3_artifact_size": {
+    "hypothesis": "artifactSize affects the f-number (focalLength/artifactSize ratio) and boost_ratio; larger artifactSize may increase curvature gradients",
+    "results": [
+      {"artifact_size": 0.05, "edge_r": 0.0037, "ssim": 0.3936, "dome_mm": 10.77, "over_limit": false},
+      {"artifact_size": 0.08, "edge_r": -0.0065, "ssim": 0.3114, "dome_mm": 17.26, "over_limit": false},
+      {"artifact_size": 0.10, "edge_r": 0.0049, "ssim": 0.2659, "dome_mm": 21.61, "over_limit": false},
+      {"artifact_size": 0.12, "edge_r": 0.0095, "ssim": 0.2290, "dome_mm": 25.95, "over_limit": true},
+      {"artifact_size": 0.15, "edge_r": 0.0193, "ssim": 0.1787, "dome_mm": 32.50, "over_limit": true}
+    ],
+    "key_finding": "Larger artifactSize improves edge_r but increases dome height. artifactSize=0.12 (dome=25.95mm) exceeds 1-inch acrylic stock by 0.55mm. artifactSize=0.15 is wildly over. The current artifactSize=0.10 (dome=21.61mm) is the correct production value — it provides the best edge_r within the 25.4mm material constraint.",
+    "recommendation": "Keep artifactSize=0.10 for 1-inch acrylic. Using 1.125-inch stock would allow artifactSize up to ~0.115, which could improve edge_r by ~1.5x vs baseline."
+  },
+
+  "h4_solidify_thickness": {
+    "hypothesis": "Solidify offset (flat bottom thickness) might affect top-surface optics",
+    "results": [
+      {"offset": 20, "edge_r": 0.0006, "ssim": 0.2597},
+      {"offset": 25, "edge_r": 0.0011, "ssim": 0.2603},
+      {"offset": 30, "edge_r": 0.0013, "ssim": 0.2601},
+      {"offset": 35, "edge_r": 0.0000, "ssim": 0.2601},
+      {"offset": 100, "edge_r": 0.0038, "ssim": 0.2665}
+    ],
+    "integration_artifact_found": false,
+    "conclusion": "Confirmed: solidify() offset has zero effect on the optical top surface. Python analysis of OBJ vertex data confirms identical top-surface z-range (0.24mm) across all offset values. Metric variation is pure Monte Carlo noise at 128 spp. The flat bottom is purely structural."
+  },
+
+  "h5_integration_quality": {
+    "question": "Is findSurface() doing a Poisson solve or direct integration?",
+    "answer": "POISSON SOLVE",
+    "detail": "findSurface() builds the divergence field of the required surface normals, then calls relax!() with up to 10000 SOR iterations (omega=1.99) with convergence threshold 1e-5. This is mathematically identical to solving the Poisson equation nabla^2 h = div(N). No path-dependent integration occurs. Boundary conditions are Neumann (zero flux) at all edges.",
+    "improvement_possible": false,
+    "note": "The SOR solver is the same code used for the transport map phi. It's well-tested and already optimal for this problem class. An FFT-based Poisson solver would be faster but produce equivalent results."
+  },
+
+  "baseline_edge_r": 0.0038,
+  "best_achievable_edge_r_within_constraints": 0.0092,
+  "best_configuration": {
+    "focalLength": 0.80,
+    "artifactSize": 0.10,
+    "phi_smoothing": "none",
+    "note": "f=0.80 gives marginally better edge_r than f=0.75 at 128px HYPER. Not validated at production 512px/1024px resolution. The physical calibration at f=0.75 should take precedence."
+  },
+
+  "recommendations": [
+    "findSurface() is already a Poisson solve — no integration quality improvement needed",
+    "Phi/normal-field smoothing provides no meaningful improvement at 128px — skip for production",
+    "focalLength=0.75 remains correct for physical setup (1-inch acrylic, 30-inch throw) despite f=0.80 showing marginally better edge_r at HYPER resolution",
+    "artifactSize=0.10 is the correct production ceiling for 1-inch acrylic. Use 1.125-inch stock to unlock artifactSize=0.115 if edge_r improvement is needed",
+    "solidify() offset is purely structural — does not affect caustic optics at all",
+    "The low edge_r values (0.003-0.009) at HYPER 128px are expected due to mesh coarseness — this is 16x fewer faces than NORMAL and 64x fewer than PROD. Metrics from NORMAL/PROD runs are more meaningful",
+    "SSIM and edge_r disagree on optimal focalLength — SSIM favors higher f, edge_r peaks at f=0.80. SSIM measures structural similarity to reference (dominated by brightness distribution); edge_r measures caustic sharpness. Use edge_r as the primary quality metric for caustic evaluation."
+  ],
+
+  "results_table": [
+    {"experiment": "baseline", "focal": 0.75, "artifact": 0.10, "phi_sigma": 0.0, "solidify_offset": 100, "edge_r": 0.0038, "ssim": 0.2665, "dome_mm": 21.61},
+    {"experiment": "H1_sigma_1.5", "focal": 0.75, "artifact": 0.10, "phi_sigma": 1.5, "solidify_offset": 100, "edge_r": 0.0052, "ssim": 0.2673, "dome_mm": 21.60},
+    {"experiment": "H2_focal_0.80", "focal": 0.80, "artifact": 0.10, "phi_sigma": 0.0, "solidify_offset": 100, "edge_r": 0.0092, "ssim": 0.2757, "dome_mm": 21.60},
+    {"experiment": "H2_focal_1.00", "focal": 1.00, "artifact": 0.10, "phi_sigma": 0.0, "solidify_offset": 100, "edge_r": 0.0034, "ssim": 0.3251, "dome_mm": 21.57},
+    {"experiment": "H3_artifact_0.15", "focal": 0.75, "artifact": 0.15, "phi_sigma": 0.0, "solidify_offset": 100, "edge_r": 0.0193, "ssim": 0.1787, "dome_mm": 32.50, "over_limit": true},
+    {"experiment": "H3_artifact_0.12", "focal": 0.75, "artifact": 0.12, "phi_sigma": 0.0, "solidify_offset": 100, "edge_r": 0.0095, "ssim": 0.2290, "dome_mm": 25.95, "over_limit": true}
+  ]
+}

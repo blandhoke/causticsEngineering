@@ -1,0 +1,129 @@
+AGENT 1 — INPUT PREPROCESSING STATION
+CausticsEngineering Experiment Report
+Date: 2026-03-17
+Pipeline: HYPER (128px, ~33k faces, Julia 6-iteration SOR)
+Render: Mitsuba 3 ptracer 128spp 256px
+Metric: Pearson r (edge correlation)
+Reference: luxcore_test/inkbrush_caustic_normal.png
+Input: luxcore_test/inkbrush.png
+Experiments: 11 variants (H0 baseline + H1-H6 with combinations)
+
+══════════════════════════════════════════════════════
+RESULTS — RANKED BY EDGE CORRELATION
+══════════════════════════════════════════════════════
+
+Rank  Label               edge_r    delta     SSIM    black%  Notes
+─────────────────────────────────────────────────────────────────────────
+1.    H6_edges            0.0508   +0.0470   0.2632   82.9%   WINNER
+2.    H1H3_lin_inv        0.0145   +0.0107   0.2686   84.4%   meets threshold
+3.    H2H3_stretch_inv    0.0083   +0.0045   0.2655   84.2%   below threshold
+4.    H3_invert           0.0075   +0.0037   0.2653   84.1%   below threshold
+5.    H0_baseline         0.0038   +0.0000   0.2666   83.4%   baseline
+6.    H2_contrast         0.0038   -0.0000   0.2660   83.3%   negligible
+7.    H4a_usm05           0.0026   -0.0012   0.2664   83.3%   worse
+8.    H4b_usm10           0.0024   -0.0014   0.2662   83.3%   worse
+9.    H4c_usm20           0.0008   -0.0030   0.2627   82.6%   worse (most)
+10.   H1_linear           -0.0025  -0.0063   0.2641   83.1%   worse
+11.   H5_binary           -0.0030  -0.0068   0.2643   83.1%   worst
+
+══════════════════════════════════════════════════════
+WINNER: H6 — SOBEL EDGE PREPROCESSING
+══════════════════════════════════════════════════════
+
+Sobel edge map preprocessing delivers edge_r = 0.0508 vs baseline 0.0038.
+Delta: +0.047 (exceeds +0.01 threshold by 4.7x).
+
+Implementation:
+    from skimage.filters import sobel
+    edges = sobel(gray_float)   # Sobel magnitude
+    edges = edges / edges.max() # normalize to [0,1]
+    save as PNG for Julia
+
+Why it works:
+    The SOR solver encodes GRADIENTS. A bright region in the input → gentle
+    lens surface → diffuse spread → dim caustic. The caustic output IS
+    fundamentally an edge/gradient image. By feeding the solver an explicit
+    edge map, we directly align the solver's input distribution with what it
+    naturally produces, removing one level of indirection. The solver gets
+    to concentrate light exactly where the edges are, rather than discovering
+    edges from a gradient image.
+
+══════════════════════════════════════════════════════
+SECOND BEST: H1H3 — LINEARIZE + INVERT
+══════════════════════════════════════════════════════
+
+Gamma linearization followed by inversion: edge_r = 0.0145, delta = +0.011.
+Just meets the +0.01 confirmed-improvement threshold.
+
+Why inversion helps: Inkbrush.png is predominantly light (mean brightness
+157.9/255). Most of the image is background white. When inverted, dark ink
+strokes become bright (high energy regions), concentrating light into the
+strokes rather than the background. This aligns the transport direction with
+the physical intuition: "bright regions in input → bright caustic".
+
+Why linearization helps when combined with inversion: The sRGB gamma curve
+compresses dark regions. Linearizing expands the mid-tones, giving the dark
+ink strokes more contrast range after inversion, which the solver can exploit
+for sharper transport gradients.
+
+Why linearization alone HURTS: Without inversion, linearizing darkens the
+overall image (the bright background stays bright, but mid-tones shift down),
+reducing the effective energy gradient the solver sees.
+
+══════════════════════════════════════════════════════
+WHAT DOES NOT WORK
+══════════════════════════════════════════════════════
+
+Unsharp mask (H4a/b/c): HURTS performance, more at higher strength.
+    The solver interprets high-frequency sharpening artifacts as structured
+    gradients and tries to encode them into the lens surface, degrading the
+    transport quality of the real content.
+
+Binary threshold (H5): HURTS performance (delta -0.007).
+    Removing gradient information leaves only a 0/1 step function. The solver
+    cannot smoothly transition between densities, producing blocky transport
+    that correlates poorly with the reference caustic's smooth edges.
+
+Contrast stretch alone (H2): Negligible.
+    The solver already normalizes energy via boost_ratio = mesh_sum / image_sum.
+    Pre-stretching contrast changes the distribution the solver sees, but the
+    normalization undoes the global effect. Local contrast is unaffected.
+
+Gamma linearization alone (H1): HURTS.
+    Darkens mid-tones, reducing overall contrast for a predominantly-bright
+    image like inkbrush. The darker image after linearization gives the solver
+    less to work with.
+
+══════════════════════════════════════════════════════
+CAVEATS AND NEXT STEPS
+══════════════════════════════════════════════════════
+
+1. All absolute edge_r values are low (0.004-0.051). The HYPER pipeline uses
+   128px input → ~33k faces. At this resolution, the mesh lacks the geometric
+   precision to reproduce fine inkbrush detail. The relative improvements are
+   real, but absolute numbers will be higher at NORMAL (512px) resolution.
+
+2. NEXT STEP RECOMMENDED: Confirm H6 improvement at NORMAL (512px) resolution.
+   Run: python3 run_pipeline_normal.sh with H6 preprocessed input.
+   Expected: absolute edge_r jumps significantly; relative improvement should
+   persist or grow.
+
+3. H6 + H1H3 combination not tested. Could be additive: apply Sobel to
+   linearized+inverted image. Worth testing if NORMAL-scale results are
+   pursued.
+
+4. The Sobel edge map has very low mean brightness (mean=15.8/255 after
+   normalization to [0,255]). The solver's boost_ratio will amplify this
+   strongly. Verify the OBJ dome height is physically sensible after running
+   this preprocessing at production scale.
+
+══════════════════════════════════════════════════════
+FILES
+══════════════════════════════════════════════════════
+
+Best preprocessed input: /tmp/agent1_workspace/inkbrush_H6_edges.png
+Best OBJ:                /tmp/agent1_workspace/exp_H6.obj
+Best caustic render:     /tmp/agent1_workspace/caustic_H6.png
+Findings JSON:           examples/agent1_findings.json (this report's companion)
+Preprocessing script:    /tmp/agent1_workspace/preprocess.py
+All metrics JSONs:       /tmp/agent1_workspace/metrics_H*.json

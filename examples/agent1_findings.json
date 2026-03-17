@@ -1,0 +1,45 @@
+{
+  "baseline_edge_r": 0.003787,
+  "best_preprocessing": "H6_sobel_edges",
+  "best_edge_r": 0.050761,
+  "delta_r": 0.046974,
+  "best_input_path": "/tmp/agent1_workspace/inkbrush_H6_edges.png",
+  "second_best_preprocessing": "H1H3_linearize_then_invert",
+  "second_best_edge_r": 0.014476,
+  "second_best_delta_r": 0.010688,
+  "recommendations": [
+    "H6 Sobel edges: feed the solver an edge map directly. delta_r=+0.047, far exceeding the +0.01 threshold. Since the caustic IS an edge phenomenon, giving the solver an explicit edge map cuts out the middleman and directly encodes where light should concentrate.",
+    "H1H3 linearize+invert: gamma linearization combined with inversion gives +0.011. For photographic inputs (sRGB-encoded), linearizing before inverting improves transport geometry. Use this if a photographic input must be used.",
+    "H3 inversion alone: +0.004, below threshold. Inversion helps slightly but not enough on its own.",
+    "H2 contrast stretch: negligible effect (+0.000). The solver's boost_ratio normalization already corrects for global exposure.",
+    "H4 unsharp mask: HURTS performance. Sharpening adds high-frequency noise that the solver interprets as structured gradients, degrading transport quality. Do not pre-sharpen.",
+    "H5 binary (Otsu): HURTS performance (delta=-0.007). Hard thresholding destroys gradient information the solver needs for smooth transport. Binary inputs produce worse results than photographic originals.",
+    "H1 gamma linearization alone: HURTS performance (delta=-0.006). Raw linearization darkens the mid-tones and reduces overall contrast as seen by the solver.",
+    "RECOMMENDATION FOR PRODUCTION: Use Sobel edge preprocessing (H6) for all inkbrush-style line-art inputs. The improvement is physically consistent with caustic physics — the solver encodes gradients, so feeding it an explicit gradient/edge map directly aligns solver input with solver physics.",
+    "IMPORTANT CAVEAT: The absolute edge_r values are all low (0.004-0.051). The reference image (inkbrush_caustic_normal.png) may be a Mitsuba render at normal resolution (512px). The HYPER pipeline (128px) produces coarser geometry that may not reproduce fine detail regardless of input. Production 512px runs should show much higher absolute edge_r.",
+    "SECOND EXPERIMENT RECOMMENDED: Run H6 at NORMAL resolution (512px) to confirm the improvement holds at production scale before committing it as the default."
+  ],
+  "results_table": [
+    {"label": "H0_baseline",        "edge_r": 0.003787,  "delta": 0.000000,  "ssim": 0.2666, "pct_black": 83.4, "notes": "Raw grayscale, no preprocessing"},
+    {"label": "H1_linear",          "edge_r": -0.002476, "delta": -0.006263, "ssim": 0.2641, "pct_black": 83.1, "notes": "sRGB gamma linearization (^2.2) — WORSE"},
+    {"label": "H2_contrast",        "edge_r": 0.003768,  "delta": -0.000019, "ssim": 0.2660, "pct_black": 83.3, "notes": "Percentile contrast stretch p1/p99 — negligible, solver already normalizes"},
+    {"label": "H3_invert",          "edge_r": 0.007529,  "delta": 0.003742,  "ssim": 0.2653, "pct_black": 84.1, "notes": "Simple inversion — small improvement, below threshold"},
+    {"label": "H4a_usm05",          "edge_r": 0.002619,  "delta": -0.001168, "ssim": 0.2664, "pct_black": 83.3, "notes": "USM amount=0.5 radius=1px — WORSE"},
+    {"label": "H4b_usm10",          "edge_r": 0.002415,  "delta": -0.001372, "ssim": 0.2662, "pct_black": 83.3, "notes": "USM amount=1.0 radius=1px — WORSE"},
+    {"label": "H4c_usm20",          "edge_r": 0.000785,  "delta": -0.003002, "ssim": 0.2627, "pct_black": 82.6, "notes": "USM amount=2.0 radius=2px — WORSE (strongest sharpening = most damage)"},
+    {"label": "H5_binary",          "edge_r": -0.003036, "delta": -0.006823, "ssim": 0.2643, "pct_black": 83.1, "notes": "Otsu binary threshold — WORSE, destroys gradient information"},
+    {"label": "H6_edges",           "edge_r": 0.050761,  "delta": 0.046974,  "ssim": 0.2632, "pct_black": 82.9, "notes": "BEST: Sobel edge map — +0.047 delta, far above threshold"},
+    {"label": "H1H3_lin_inv",       "edge_r": 0.014476,  "delta": 0.010688,  "ssim": 0.2686, "pct_black": 84.4, "notes": "Linearize + invert — 2nd best, +0.011, meets threshold"},
+    {"label": "H2H3_stretch_inv",   "edge_r": 0.008290,  "delta": 0.004503,  "ssim": 0.2655, "pct_black": 84.2, "notes": "Contrast stretch + invert — below threshold"}
+  ],
+  "metadata": {
+    "date": "2026-03-17",
+    "pipeline": "HYPER (128px, ~33k faces)",
+    "julia_solver": "CausticsEngineering SOR 6-iteration",
+    "render_method": "Mitsuba 3 ptracer 128spp 256px",
+    "reference_image": "luxcore_test/inkbrush_caustic_normal.png",
+    "source_input": "luxcore_test/inkbrush.png",
+    "metric": "Pearson r (edge correlation via Sobel filter)",
+    "experiments_run": 11
+  }
+}

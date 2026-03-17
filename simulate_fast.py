@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
+# FAST pipeline — 256px input, ~131k faces
 """
-simulate_cow.py — Forward ray trace for the cow_render target.
+simulate_fast.py — Forward ray trace for fast iteration at 256px mesh resolution.
 
-First run: traces rays through examples/original_image.obj, saves to cow_accum.npy.
-Subsequent runs: loads cached accumulator instantly.
-Output: examples/caustic_cow.png  (never overwrites caustic_simulated.png)
+Uses auto-sigma: SPLAT_SIGMA and SPLAT_RADIUS are computed from actual face count
+after OBJ parsing, so this script is resolution-independent.
+
+Formula: sigma = 1.5 * sqrt(525000 / face_count)
+  512px mesh (~525k faces)  → sigma=1.50, radius=3
+  256px mesh (~131k faces)  → sigma=3.00, radius=5
+
+Output: examples/caustic_fast.png
+Cache:  examples/fast_accum.npy, examples/fast_meta.npy
 """
 
 import numpy as np
@@ -16,26 +23,35 @@ from pathlib import Path
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE        = Path("/Users/admin/causticsEngineering/examples")
-OBJ_PATH    = BASE / "original_image.obj"
-OUTPUT_PATH = BASE / "caustic_cow_v3.png"
-ACCUM_PATH  = BASE / "cow_accum.npy"
-META_PATH   = BASE / "cow_meta.npy"
+OBJ_PATH    = BASE / "original_image_fast.obj"
+ACCUM_PATH  = BASE / "fast_accum.npy"
+META_PATH   = BASE / "fast_meta.npy"
+OUTPUT_PATH = BASE / "caustic_fast.png"
 
-# Guard: never silently overwrite the reference render
-assert OUTPUT_PATH.name != "caustic_simulated.png", "Refusing to overwrite reference render"
+# Guard: never silently overwrite reference renders
+assert OUTPUT_PATH.name not in (
+    "caustic_simulated.png",
+    "caustic_befuddled_v1.png",
+    "caustic_befuddled_v2.png",
+    "caustic_befuddled_v3.png",
+    "caustic_befuddled_v4.png",
+    "caustic_befuddled_v5.png",
+), "Refusing to overwrite reference render"
+
+# ── Physical configuration ────────────────────────────────────────────────────
+# Solver:  focalLength=0.75m, artifactSize=0.1m, IOR=1.49
+# Input:   256px (fast iteration mesh, ~131k faces)
+# Physics: FOCAL_DIST must equal solver focalLength=0.75
+# Note:    SPLAT_SIGMA and SPLAT_RADIUS are computed dynamically after OBJ parse
+# ─────────────────────────────────────────────────────────────────────────────
 
 IOR          = 1.49      # acrylic / PMMA
-FOCAL_DIST   = 0.2       # metres
-IMAGE_RES    = 1024      # square pixels
+FOCAL_DIST   = 0.75      # metres — MUST match focalLength in src/create_mesh.jl
+IMAGE_RES    = 512       # output resolution (kept at 512 for comparability)
 BATCH_SIZE   = 100_000   # faces per batch
 N_PASSES     = 4         # jittered barycentric supersampling passes
-SPLAT_SIGMA  = 1.5       # Gaussian splat sigma (pixels)
-SPLAT_RADIUS = 3         # Gaussian splat half-width (pixels)
 
-# Precompute Gaussian kernel weights once
-_ks     = range(-SPLAT_RADIUS, SPLAT_RADIUS + 1)
-_kernel = {(dy, dx): np.exp(-(dx**2 + dy**2) / (2 * SPLAT_SIGMA**2))
-           for dy in _ks for dx in _ks}
+# SPLAT_SIGMA and SPLAT_RADIUS set after OBJ parse (see below)
 
 # ── Warm sunlight colormap: black → amber → golden yellow → near-white ─────────
 CMAP = LinearSegmentedColormap.from_list('sunlight', [
@@ -74,6 +90,17 @@ else:
     faces = np.fromstring(f_buf.decode(), dtype=np.int32,   sep=' ').reshape(-1, 3) - 1
     print(f"  {len(verts):,} vertices  |  {len(faces):,} faces")
 
+    # Auto-sigma: scale from 512px baseline (~525k faces, sigma=1.5)
+    face_count   = len(faces)
+    SPLAT_SIGMA  = 1.5 * (525000 / face_count) ** 0.5
+    SPLAT_RADIUS = max(2, int(round(SPLAT_SIGMA * 1.5)))
+    print(f"[fast] sigma={SPLAT_SIGMA:.3f} radius={SPLAT_RADIUS} faces={face_count:,}")
+
+    # Precompute Gaussian kernel weights
+    _ks     = range(-SPLAT_RADIUS, SPLAT_RADIUS + 1)
+    _kernel = {(dy, dx): np.exp(-(dx**2 + dy**2) / (2 * SPLAT_SIGMA**2))
+               for dy in _ks for dx in _ks}
+
     z_min, z_max  = verts[:, 2].min(), verts[:, 2].max()
     cx = (verts[:, 0].min() + verts[:, 0].max()) / 2
     cy = (verts[:, 1].min() + verts[:, 1].max()) / 2
@@ -98,7 +125,7 @@ else:
     ymin, ymax = cy - pad, cy + pad
     accum = np.zeros((IMAGE_RES, IMAGE_RES), dtype=np.float64)
 
-    print(f"\nTracing rays  ({N_PASSES} passes, Gaussian splat r={SPLAT_RADIUS})...")
+    print(f"\nTracing rays  ({N_PASSES} passes, Gaussian splat r={SPLAT_RADIUS}, sigma={SPLAT_SIGMA:.3f})...")
     n_hit_total = 0
     total       = len(top_idx)
     np.random.seed(42)   # reproducible jitter
@@ -201,8 +228,10 @@ for spine in ax.spines.values():
     spine.set_edgecolor('#444')
 ax.set_xlabel("X (m)")
 ax.set_ylabel("Y (m)")
-ax.set_title("Predicted caustic (cow)  —  IOR 1.49  |  focal 0.2 m",
-             color='#ddd', fontsize=12)
+ax.set_title(
+    "Predicted caustic (fast / 256px)  —  "
+    "IOR 1.49  |  f=0.75m  |  4-pass  |  auto-\u03c3",
+    color='#ddd', fontsize=12)
 plt.tight_layout()
 plt.savefig(OUTPUT_PATH, dpi=150, bbox_inches='tight', facecolor='black')
 plt.close()

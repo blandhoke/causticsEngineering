@@ -163,15 +163,41 @@ NEVER apply her settings to this project.
     caustic_befuddled_v4.png        <- befuddled v4 BROKEN render (FOCAL_DIST mismatch)
     caustic_befuddled_v5.png        <- befuddled v5 FIXED render (current best)
     physical_lens_8x8.obj           <- CNC-ready scaled OBJ (8"x8", dome 25.22mm, throw 30")
-  simulate_cow.py                   <- cow v3 ray trace (DO NOT MODIFY -- it's the template)
-  simulate_befuddled_v5.py          <- current active befuddled script (f=0.75, sigma=0.75)
+  simulate_cow2_fresh.py            <- Cow 2 ACTIVE ray tracer (PREFIX-based, auto-sigma, both flips)
+                                       Use this for all new Cow 2 runs. Clean slate — no legacy params.
+  simulate_cow.py                   <- cow v3 ray trace (historical reference ONLY)
+                                       ⚠ WARNING: FOCAL_DIST=0.2 — WRONG for current solver (f=0.75).
+                                       Using this as a template will reproduce the v4 washout bug.
+                                       DO NOT copy-paste from simulate_cow.py for new scripts.
+  simulate_befuddled_v5.py          <- befuddled v5 script (f=0.75, sigma=0.75) — Y-flip corrected
   simulate_befuddled.py             <- OUTDATED (FOCAL_DIST=0.2 bug) — raises RuntimeError if run
   simulate_caustic.py               <- water drop reference script (do not modify)
   simulate_circle.py                <- circle test script (reference)
   verify_obj.py                     <- OBJ geometry validator (exits 0 on pass)
   make_physical_lens.py             <- physical CNC scaler (writes physical_lens_8x8.obj)
+  prepare_cow2_inputs.py            <- generates Option B (edges) and Option C (silhouette) inputs
+  prepare_visual_handoff.py         <- resizes renders for Claude Chat handoff package
+  run_hyper.jl                      <- Julia entry point for HYPER pipeline (128px, ~10s)
+  run_fast.jl                       <- Julia entry point for FAST pipeline (256px, ~45s)
+  run_normal.jl                     <- Julia entry point for NORMAL pipeline (512px, ~5min)
+  run_pipeline_hyper.sh             <- HYPER pipeline orchestrator (build-only, do not auto-run)
+  run_pipeline_fast.sh              <- FAST pipeline orchestrator (build-only, do not auto-run)
+  run_pipeline_normal.sh            <- NORMAL pipeline orchestrator (build-only, do not auto-run)
+  simulate_hyper.py                 <- ray tracer for HYPER mesh (auto-sigma)
+  simulate_fast.py                  <- ray tracer for FAST mesh (auto-sigma)
+  simulate_normal.py                <- ray tracer for NORMAL mesh (sigma=1.5, confirmed baseline)
+  examples/
+    cow2_option_b_edges.png         <- Cow 2 solver input: Sobel edge map (awaiting Claude Chat approval)
+    cow2_option_c_silhouette.png    <- Cow 2 solver input: white silhouette on black (awaiting approval)
+    caustic_befuddled_v5_flipfix.png <- v5 render with Y+X flip corrected (reference)
+    original_image_hyper.obj        <- HYPER mesh output (128px, ~33k faces)
+    original_image_fast.obj         <- FAST mesh output (256px, ~131k faces)
+    original_image_normal.obj       <- NORMAL mesh output (512px, ~525k faces)
+  claude_chat_handoff4/             <- visual handoff package for Claude Chat
+    VISUAL_ANALYSIS_REQUEST.md      <- questions for Claude Chat about Option B/C inputs
+    CLAUDE_CHAT_FINDINGS.md         <- Claude Chat writes approval here before solver runs
 
-NOTE: simulate_befuddled.py is OUTDATED (FOCAL_DIST=0.2 bug). Use simulate_befuddled_v5.py.
+NOTE: simulate_befuddled.py is OUTDATED (FOCAL_DIST=0.2 bug). Use simulate_cow2_fresh.py for new runs.
 
 ---
 
@@ -223,7 +249,9 @@ CONFIRM REQUIRED before modifying create_mesh.jl.
 
 ## Forward Ray Trace Pipeline (simulate_*.py)
 
-Current version: simulate_cow.py (v3 -- all improvements applied, use as template)
+Current template: simulate_cow2_fresh.py (PREFIX-based, auto-sigma, zero legacy params)
+  ⚠ DO NOT use simulate_cow.py as template — it has FOCAL_DIST=0.2 which is wrong
+    for the current solver (focalLength=0.75). Using it will silently reproduce v4 washout.
 
 Algorithm:
   1. Parse OBJ -> vertices, faces
@@ -234,19 +262,26 @@ Algorithm:
      c. Refract at flat bottom surface (back to air)
      d. Intersect with receiver plane at focal distance below lens
      e. Weight: area x cos(theta) / r^2
-     f. Gaussian splat onto accumulator (sigma=1.5px, radius=3px kernel)
+     f. Gaussian splat onto accumulator (auto-sigma from face count)
   4. Divide by N_PASSES (energy conservation)
   5. Normalize, sqrt gamma, plot with sunlight colormap
   6. Optional: scipy gaussian_filter(sigma=0.5) post-process smooth
 
+Orientation: BOTH flips required for correct output:
+  img = np.flipud(np.fliplr(accum.copy()))
+  np.fliplr alone is WRONG — confirmed to produce Y-inverted caustic (all pre-2026-03-16 renders).
+  Both flips are applied in: simulate_cow2_fresh.py, simulate_befuddled_v5.py,
+  simulate_hyper.py, simulate_fast.py, simulate_normal.py, simulate_cow.py, simulate_circle.py
+
 Parameters (confirmed working):
   N_PASSES     = 4        <- do not reduce; 4x jitter is minimum for clean output
-  SPLAT_SIGMA  = 0.75     <- Gaussian splat width (pixels) FOR 1024px / 2.1M face mesh
-                             Formula: sigma = 1.5 / sqrt(face_count / 525000)
-                             512px mesh (~525k faces) -> sigma=1.5, radius=3
-                             1024px mesh (~2.1M faces) -> sigma=0.75, radius=2
-  SPLAT_RADIUS = 2        <- kernel half-width for 1024px mesh (5x5 kernel)
-  IMAGE_RES    = 1024     <- output PNG resolution
+  SPLAT_SIGMA            AUTO-COMPUTED from top-surface face count:
+                             Formula: 1.5 / sqrt(top_face_count / 525_000)
+                             128px mesh (~33k faces)  -> sigma≈6.0, radius≈12
+                             256px mesh (~131k faces) -> sigma≈3.0, radius≈6
+                             512px mesh (~525k faces) -> sigma=1.5, radius=3   (baseline)
+                             1024px mesh (~2.1M faces)-> sigma≈0.75, radius≈2
+  IMAGE_RES    = 512      <- output PNG resolution (512 for all speed tiers; comparability)
   IOR          = 1.49
   FOCAL_DIST   = 0.75     <- MUST MATCH focalLength in create_mesh.jl (currently 0.75m)
                              v4 was broken because this was 0.2 while solver used 0.75
@@ -281,46 +316,61 @@ a simulator bug -- it is correct physics from an unsuitable input image.
 
 ---
 
-## Active Research: Input Image Strategy
+## Cow 2 Input Strategy
 
 BEST:   High-contrast near-binary images (white subject, black background)
 GOOD:   Silhouettes, bold line art, logos
-POOR:   Photographic images with gradients (produces edge-dominated output)
+POOR:   Photographic images with gradients — CONFIRMED to produce photographic emboss, NOT caustic
 
-Option A -- Heavy Gaussian blur preprocessing (ACTIVE — befuddled v5 used this):
-  Smooth edges into broad halos before the solver.
-  "befuddled cow 1.jpg": contrast-boosted in Photoshop, pure black/white
-  removed, 0.5px Gaussian blur applied by user. This is the Option A test.
-  Expected: broader fill regions, less edge-dominated output.
+Option A -- CONFIRMED WRONG for caustics:
+  befuddled_cow_solver_input.jpg is a continuous-gradient photographic grayscale.
+  v5 output was a photographic emboss/relief map rendered in amber — the entire lens
+  area filled with fur texture and hair detail. This is the OPPOSITE of a caustic.
+  Gaussian blur preprocessing made it WORSE by spreading gradients further.
+  DO NOT use photographic images as solver input. DO NOT use Option A again.
 
-Option B -- Feed edge map as target:
-  Pre-compute Sobel edge magnitude -> feed to Julia.
-  Expected: caustic matches edges explicitly, sharp, won't read as animal.
+Option B -- Sobel edge map (GENERATED — awaiting Claude Chat visual approval):
+  File: examples/cow2_option_b_edges.png
+  Generated by: prepare_cow2_inputs.py (Sobel filter, threshold 0.15)
+  Expected: caustic shows bright cow outline on dark background.
 
-Option C -- Silhouette / binary:
-  White-filled cow on black. All energy inside silhouette boundary.
-  Expected: glowing cow shape, clean edges, no interior detail.
+Option C -- White silhouette on black (GENERATED — awaiting Claude Chat visual approval):
+  File: examples/cow2_option_c_silhouette.png
+  Generated by: prepare_cow2_inputs.py (threshold=128, Otsu-style)
+  Expected: glowing filled cow shape, clean edges, no interior texture detail.
+
+STATUS: Both inputs in claude_chat_handoff4/ awaiting Claude Chat visual approval.
+Claude Chat writes approval to claude_chat_handoff4/CLAUDE_CHAT_FINDINGS.md.
+Do not run solver with either input until that file exists and approves the input.
 
 ---
 
-## Grid Resolution Strategy
+## Grid Resolution Strategy (Three-Speed Pipeline)
 
-  512px input  -> ~525k faces   -> Julia ~5 min   -> ray trace ~8-15 min  -> ITERATION
-  1024px input -> ~2.1M faces   -> Julia ~45 min  -> ray trace ~30-40 min -> PRODUCTION
+  HYPER  128px  -> ~33k faces    -> Julia ~10s   -> ray trace ~30s    -> total ~1 min
+  FAST   256px  -> ~131k faces   -> Julia ~45s   -> ray trace ~2 min  -> total ~3 min
+  NORMAL 512px  -> ~525k faces   -> Julia ~5 min -> ray trace ~8 min  -> total ~13 min
+  PROD   1024px -> ~2.1M faces   -> Julia ~45min -> ray trace ~35 min -> total ~80 min
+
+Pipeline entry points:
+  HYPER:  run_hyper.jl + simulate_hyper.py   orchestrated by run_pipeline_hyper.sh
+  FAST:   run_fast.jl + simulate_fast.py     orchestrated by run_pipeline_fast.sh
+  NORMAL: run_normal.jl + simulate_normal.py orchestrated by run_pipeline_normal.sh
+  PROD:   run.jl (1024px) + simulate_cow2_fresh.py (set PREFIX and OBJ_PATH)
+
+All run_*.jl files read target image from COW2_INPUT env var:
+  COW2_INPUT=./examples/cow2_option_c_silhouette.png bash run_pipeline_hyper.sh
+
+Workflow: run HYPER → FAST → NORMAL to evaluate an input strategy before committing to PROD.
+Production (1024px) only after a NORMAL run confirms the input looks promising.
 
 DO NOT decimate the Blender mesh to reduce face count.
   Decimation destroys solver precision. Each vertex encodes a specific
   refractive deflection angle. Blender's decimate merges vertices in ways
   that corrupt the surface normals the physics depends on.
 
-To use 512-equivalent mesh with 1024px image:
-  Resize image to 512x512 in run.jl before passing to engineer_caustics().
-  This is the correct way to control resolution, not grid_definition.
-
-Current status: using 1024px input image for befuddled cow run.
-  -> This will produce a ~2.1M face mesh automatically.
-  -> Julia will take ~45 min. Ray trace will take ~30-40 min.
-  -> If user wants a quick test: resize image to 512px in run.jl first.
+  ⚠ CONFIRM REQUIRED before running any pipeline — all orchestrators overwrite original_image.obj
+    (they back up and restore, but this is still a destructive operation on production state).
 
 ---
 
@@ -417,7 +467,8 @@ useful or confirmed NOT useful for this project.
                      Parse: phase, %, convergence val, errors, last 5 log lines
   verify_obj.py      Post-solver geometry check — exits 0 on pass
   make_physical_lens.py  CNC scaler — dynamic scale from actual OBJ span
-  simulate_befuddled_v5.py  Current active ray tracer (FOCAL_DIST=0.75, sigma=0.75)
+  simulate_cow2_fresh.py    Cow 2 ACTIVE ray tracer (PREFIX-based, auto-sigma, both flips)
+  simulate_befuddled_v5.py  Legacy Cow 2 script (FOCAL_DIST=0.75, Y-flip corrected 2026-03-16)
   analyze_befuddled_v5.py   9-panel analysis figure + metrics
 
 ### MCP Servers

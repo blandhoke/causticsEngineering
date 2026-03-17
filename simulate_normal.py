@@ -1,10 +1,15 @@
+# NORMAL pipeline — 512px input, ~525k faces, sigma=1.5 (confirmed baseline)
 #!/usr/bin/env python3
 """
-simulate_cow.py — Forward ray trace for the cow_render target.
+simulate_normal.py — Forward ray trace for the NORMAL (512px) pipeline.
 
-First run: traces rays through examples/original_image.obj, saves to cow_accum.npy.
+512px input produces ~525k faces. sigma=1.5 is the empirically confirmed
+baseline splat width for this face density. Do not scale sigma here.
+
+First run: traces rays through examples/original_image_normal.obj,
+           saves to normal_accum.npy.
 Subsequent runs: loads cached accumulator instantly.
-Output: examples/caustic_cow.png  (never overwrites caustic_simulated.png)
+Output: examples/caustic_normal.png
 """
 
 import numpy as np
@@ -16,21 +21,38 @@ from pathlib import Path
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE        = Path("/Users/admin/causticsEngineering/examples")
-OBJ_PATH    = BASE / "original_image.obj"
-OUTPUT_PATH = BASE / "caustic_cow_v3.png"
-ACCUM_PATH  = BASE / "cow_accum.npy"
-META_PATH   = BASE / "cow_meta.npy"
+OBJ_PATH    = BASE / "original_image_normal.obj"
+ACCUM_PATH  = BASE / "normal_accum.npy"
+META_PATH   = BASE / "normal_meta.npy"
+OUTPUT_PATH = BASE / "caustic_normal.png"
 
-# Guard: never silently overwrite the reference render
-assert OUTPUT_PATH.name != "caustic_simulated.png", "Refusing to overwrite reference render"
+# Guard: never silently overwrite reference renders
+assert OUTPUT_PATH.name not in (
+    "caustic_simulated.png",
+    "caustic_befuddled_v1.png",
+    "caustic_befuddled_v2.png",
+    "caustic_befuddled_v3.png",
+    "caustic_befuddled_v4.png",
+), "Refusing to overwrite reference render"
+
+# ── Physical configuration ────────────────────────────────────────────────────
+# Solver:  focalLength=0.75m, artifactSize=0.1m, IOR=1.49
+# Input:   512px (resized in run_normal.jl)
+# Mesh:    ~525k faces (513×513 nodes from 512px input)
+# Physics: FOCAL_DIST must equal solver focalLength=0.75
+#          Splat sigma=1.5 is the confirmed baseline for 512px / ~525k face mesh
+# Physical: 8"×8" lens, dome ≈25.2mm (fits 1" acrylic), throw ≈30"
+# ─────────────────────────────────────────────────────────────────────────────
 
 IOR          = 1.49      # acrylic / PMMA
-FOCAL_DIST   = 0.2       # metres
-IMAGE_RES    = 1024      # square pixels
+FOCAL_DIST   = 0.75      # metres — MUST match focalLength in src/create_mesh.jl
+IMAGE_RES    = 512       # square pixels — 512 for direct comparability with input
 BATCH_SIZE   = 100_000   # faces per batch
 N_PASSES     = 4         # jittered barycentric supersampling passes
-SPLAT_SIGMA  = 1.5       # Gaussian splat sigma (pixels)
-SPLAT_RADIUS = 3         # Gaussian splat half-width (pixels)
+SPLAT_SIGMA  = 1.5       # Gaussian splat sigma (pixels) — fixed 512px baseline (empirically confirmed)
+SPLAT_RADIUS = 3         # Gaussian splat half-width (pixels) — fixed 512px baseline
+
+print(f"[normal] sigma={SPLAT_SIGMA} radius={SPLAT_RADIUS} (512px baseline)")
 
 # Precompute Gaussian kernel weights once
 _ks     = range(-SPLAT_RADIUS, SPLAT_RADIUS + 1)
@@ -98,7 +120,7 @@ else:
     ymin, ymax = cy - pad, cy + pad
     accum = np.zeros((IMAGE_RES, IMAGE_RES), dtype=np.float64)
 
-    print(f"\nTracing rays  ({N_PASSES} passes, Gaussian splat r={SPLAT_RADIUS})...")
+    print(f"\nTracing rays  ({N_PASSES} passes, Gaussian splat r={SPLAT_RADIUS}, sigma={SPLAT_SIGMA})...")
     n_hit_total = 0
     total       = len(top_idx)
     np.random.seed(42)   # reproducible jitter
@@ -201,8 +223,10 @@ for spine in ax.spines.values():
     spine.set_edgecolor('#444')
 ax.set_xlabel("X (m)")
 ax.set_ylabel("Y (m)")
-ax.set_title("Predicted caustic (cow)  —  IOR 1.49  |  focal 0.2 m",
-             color='#ddd', fontsize=12)
+ax.set_title(
+    "Predicted caustic (normal 512px)  —  "
+    "IOR 1.49  |  f=0.75m  |  4-pass  |  \u03c3=1.5px",
+    color='#ddd', fontsize=12)
 plt.tight_layout()
 plt.savefig(OUTPUT_PATH, dpi=150, bbox_inches='tight', facecolor='black')
 plt.close()

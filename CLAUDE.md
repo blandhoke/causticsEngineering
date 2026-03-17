@@ -281,13 +281,13 @@ a simulator bug -- it is correct physics from an unsuitable input image.
 
 ---
 
-## Target Image Strategy
+## Active Research: Input Image Strategy
 
 BEST:   High-contrast near-binary images (white subject, black background)
 GOOD:   Silhouettes, bold line art, logos
 POOR:   Photographic images with gradients (produces edge-dominated output)
 
-Option A -- Heavy Gaussian blur preprocessing (CURRENT EXPERIMENT):
+Option A -- Heavy Gaussian blur preprocessing (ACTIVE — befuddled v5 used this):
   Smooth edges into broad halos before the solver.
   "befuddled cow 1.jpg": contrast-boosted in Photoshop, pure black/white
   removed, 0.5px Gaussian blur applied by user. This is the Option A test.

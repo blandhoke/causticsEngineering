@@ -1,0 +1,8 @@
+{
+  "label": "fast_caustic_design OTMap",
+  "ssim": 0.2084842724012655,
+  "pearson_r_edges": 0.06430649012327194,
+  "pct_black": 17.22869873046875,
+  "max_pixel_raw": 253.0,
+  "mean_brightness": 0.44391438364982605
+}

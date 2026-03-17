@@ -1,0 +1,8 @@
+{
+  "label": "Julia SOR baseline",
+  "ssim": 0.20581513204882013,
+  "pearson_r_edges": 0.20374639332294464,
+  "pct_black": 19.31915283203125,
+  "max_pixel_raw": 246.0,
+  "mean_brightness": 0.19368673861026764
+}

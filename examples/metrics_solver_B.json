@@ -1,0 +1,8 @@
+{
+  "label": "Poisson caustic design",
+  "ssim": 0.17523035514859636,
+  "pearson_r_edges": 0.08951077610254288,
+  "pct_black": 19.271087646484375,
+  "max_pixel_raw": 247.0,
+  "mean_brightness": 0.3667120337486267
+}

@@ -1,0 +1,27 @@
+FALLBACK ACTIVATED: Schwartzburg 2014 (ma.py) -> Poisson Caustic Design
+
+Primary solver (CompN3rd/ShapeFromCaustics schwartzburg_2014/ma.py) FAILED:
+
+Error 1: PyMongeAmpere (MongeAmpere C extension) has no pip package distribution.
+  pip3 install pymongeampere -> "ERROR: Could not find a version that satisfies the requirement"
+  The GitHub repo mrgt/PyMongeAmpere requires a manual C++ build with CGAL.
+
+Error 2: CGAL Python bindings (CGAL.CGAL_Kernel, CGAL.CGAL_Triangulation_2, CGAL.CGAL_Interpolation)
+  also require manual compilation. No pip package available.
+
+Error 3: ma.py requires PyTorch with CUDA (calls x.cuda() throughout normal_integration()).
+  This machine has no NVIDIA GPU. PyTorch 2.2.2 installed but cuda.is_available() = False.
+  The solver would crash at the first .cuda() call even if MongeAmpere were available.
+
+Error 4: NVidia OptiX 6.5 required for the parent project's C++ raytracer. Not available on macOS.
+
+Conclusion: Schwartzburg 2014 ma.py is structurally incompatible with this hardware.
+  It requires NVIDIA GPU + CUDA + PyMongeAmpere (CGAL-based C extension) + CGAL Python bindings.
+  None of these are available on macOS Apple Silicon / Intel Mac without NVIDIA GPU.
+
+FALLBACK: dylanmsu/poisson_caustic_design
+  Cloned to: /tmp/poisson_caustic_design
+  Built successfully with cmake + AppleClang 15.0.0
+  IOR: hardcoded to 1.49 in caustic_design.cpp line 271 (matches our target)
+  Focal length: direct --focal_l parameter
+  Output: solidified OBJ (flat bottom included natively)

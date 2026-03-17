@@ -29,6 +29,12 @@ Manifest.toml
 # Large binary caches — do not commit
 *.npy
 
+# Julia solver iteration diagnostics (updated every run)
+examples/loss_it*.png
+
+# Solver logs and symlinks (updated every run)
+logs/
+
 # Rendered output images
 examples/caustic_*.png
 examples/befuddled_analysis*.png

@@ -1,0 +1,114 @@
+  Activating project at `~/causticsEngineering`
+Loading: Final cows/inkbrush.png
+Resized to 256x256 — mesh will be ~131k faces
+-0.6094110999643397
+1.000030359260266
+Loss:
+Minimum: -0.6094110999643397
+Maximum: 1.000030359260266
+SUM: -3.865352482534945e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.9552086415965683
+0.005731724576062497
+4.880856998178603e-5
+Convergence reached at step 1654 with max_update of 9.451286573688988e-6
+Overall min_t:0.8043638662465946
+-1.0304634671213173
+1.116985359647015
+Loss:
+Minimum: -1.0304634671213173
+Maximum: 1.116985359647015
+SUM: 1.8189894035458565e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.5889098997202072
+0.0038674495601597404
+3.46119382310428e-5
+Convergence reached at step 1546 with max_update of 9.997548572740767e-6
+Overall min_t:0.7049057224937134
+-1.1822445424876296
+1.202916531094484
+Loss:
+Minimum: -1.1822445424876296
+Maximum: 1.202916531094484
+SUM: 2.2737367544323206e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.5474884008853635
+0.002764137566608353
+2.4275506563322668e-5
+Convergence reached at step 1541 with max_update of 9.782417753676497e-6
+Overall min_t:0.6854088813910584
+-1.2809584536311425
+1.234944706836151
+Loss:
+Minimum: -1.2809584536311425
+Maximum: 1.234944706836151
+SUM: -1.3642420526593924e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.44312747342811293
+0.0021977057743779674
+1.7959628766889278e-5
+Convergence reached at step 1538 with max_update of 9.188910974162374e-6
+Overall min_t:0.7258699488389432
+-1.338776852255204
+1.2867502591725162
+Loss:
+Minimum: -1.338776852255204
+Maximum: 1.2867502591725162
+SUM: 3.069544618483633e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.3271720532406695
+0.0015891786096001515
+1.43290384392869e-5
+Convergence reached at step 1531 with max_update of 9.962715274822731e-6
+Overall min_t:0.318273336831309
+-1.351223463455673
+1.2438924788211891
+Loss:
+Minimum: -1.351223463455673
+Maximum: 1.2438924788211891
+SUM: -2.8421709430404007e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.2947748660016654
+0.0014236965446052354
+1.3054549833698691e-5
+Convergence reached at step 1517 with max_update of 9.668276186616532e-6
+Overall min_t:0.1664674946319399
+0.000390625
+Have all the divergences
+Divergence sum: 0.394884004241578
+0.0008950795536380125
+Convergence reached at step 948 with max_update of 9.823392822928683e-6
+Example heights: -0.20127151842261812  and  -0.20127151842261812 and 9.798728481577381
+Specs: 257  257  132098  1024  131072 264192
+We now have 132098 valid nodes
+We've filled up 131072 triangles
+We've filled up 262144 triangles
+/Users/admin/causticsEngineering/simulate_batch.py:138: RuntimeWarning: divide by zero encountered in divide
+  t_pln = np.where(np.abs(dz_e) > 1e-12, (plane_z - exit_p[:, 2]) / dz_e, -1.0)
+[inkbrush (fast)] Parsing OBJ: mesh.obj ...
+[inkbrush (fast)]   132,098 vertices | 264,192 faces
+[inkbrush (fast)]   top_faces=132,054  sigma=2.991  radius=4
+[inkbrush (fast)]   dome=21.75mm  light_z=0.7522  plane_z=-0.7695
+[inkbrush (fast)] Tracing 4 passes ...
+[inkbrush (fast)]   100,000/132,054 (76%)[inkbrush (fast)]   132,054/132,054 (100%)
+[inkbrush (fast)]   hit_rate=99.3%  sigma=2.991  faces=132,054
+[inkbrush (fast)] Done -> /Users/admin/causticsEngineering/Final cows/inkbrush/fast/caustic.png
+TIMING: Julia=18s RayTrace=4s Total=23s

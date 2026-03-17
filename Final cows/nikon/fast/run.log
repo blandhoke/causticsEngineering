@@ -1,0 +1,115 @@
+  Activating project at `~/causticsEngineering`
+Loading: Final cows/Nikon.png
+Resized to 256x256 — mesh will be ~131k faces
+-1.2969041403232895
+0.9974375294870508
+Loss:
+Minimum: -1.2969041403232895
+Maximum: 0.9974375294870508
+SUM: 3.637978807091713e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+7.202877409558804
+0.032658044145941874
+0.00010198251128866372
+Convergence reached at step 1697 with max_update of 9.988947293413375e-6
+Overall min_t:0.5580293675540288
+-1.9352013674337598
+1.2758573449624697
+Loss:
+Minimum: -1.9352013674337598
+Maximum: 1.2758573449624697
+SUM: 1.8189894035458565e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+5.10499422661272
+0.02019020854318985
+6.731280163463435e-5
+Convergence reached at step 1644 with max_update of 9.980420826647038e-6
+Overall min_t:0.5668837506625869
+-2.1583015139434565
+1.5140535385560179
+Loss:
+Minimum: -2.1583015139434565
+Maximum: 1.5140535385560179
+SUM: 1.8189894035458565e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+3.143206672943242
+0.011604956171226689
+4.343903567695095e-5
+Convergence reached at step 1631 with max_update of 9.381948586152378e-6
+Overall min_t:0.31136541416709174
+-2.2108220375434726
+1.5939743555042396
+Loss:
+Minimum: -2.2108220375434726
+Maximum: 1.5939743555042396
+SUM: -1.8189894035458565e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+2.3864217500558857
+0.00859291304273366
+3.431250538051156e-5
+Convergence reached at step 1623 with max_update of 9.684351268901547e-6
+Overall min_t:0.16315181195579256
+-2.1597481324959924
+1.6363347096042566
+Loss:
+Minimum: -2.1597481324959924
+Maximum: 1.6363347096042566
+SUM: 0.0
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+2.063568186562038
+0.007365290491838938
+3.0027812063747974e-5
+Convergence reached at step 1623 with max_update of 8.086886639632196e-6
+Overall min_t:0.08377421020910819
+-2.114572148272385
+1.641075545386611
+Loss:
+Minimum: -2.114572148272385
+Maximum: 1.641075545386611
+SUM: -9.094947017729282e-13
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+1.914852371039418
+0.006802987151007222
+2.8003011223739863e-5
+Convergence reached at step 1622 with max_update of 9.198551325139138e-6
+Overall min_t:0.0425935936015207
+0.000390625
+Have all the divergences
+Divergence sum: 0.22987578290286947
+0.004478829562045746
+1.8607518684065648e-5
+Convergence reached at step 1024 with max_update of 9.617163322263963e-6
+Example heights: 2.0555694720599584  and  2.0555694720599584 and 12.055569472059958
+Specs: 257  257  132098  1024  131072 264192
+We now have 132098 valid nodes
+We've filled up 131072 triangles
+We've filled up 262144 triangles
+/Users/admin/causticsEngineering/simulate_batch.py:138: RuntimeWarning: divide by zero encountered in divide
+  t_pln = np.where(np.abs(dz_e) > 1e-12, (plane_z - exit_p[:, 2]) / dz_e, -1.0)
+[nikon (fast)] Parsing OBJ: mesh.obj ...
+[nikon (fast)]   132,098 vertices | 264,192 faces
+[nikon (fast)]   top_faces=131,711  sigma=2.995  radius=4
+[nikon (fast)]   dome=22.39mm  light_z=0.7529  plane_z=-0.7695
+[nikon (fast)] Tracing 4 passes ...
+[nikon (fast)]   100,000/131,711 (76%)[nikon (fast)]   131,711/131,711 (100%)
+[nikon (fast)]   hit_rate=99.5%  sigma=2.995  faces=131,711
+[nikon (fast)] Done -> /Users/admin/causticsEngineering/Final cows/nikon/fast/caustic.png
+TIMING: Julia=19s RayTrace=4s Total=23s

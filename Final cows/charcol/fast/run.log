@@ -1,0 +1,112 @@
+  Activating project at `~/causticsEngineering`
+Loading: Final cows/charcol.png
+Resized to 256x256 — mesh will be ~131k faces
+-2.342049747948494
+0.9274539917303068
+Loss:
+Minimum: -2.342049747948494
+Maximum: 0.9274539917303068
+SUM: 3.637978807091713e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+3.185950573979011
+0.00797402975845039
+6.161992093514479e-5
+Convergence reached at step 1661 with max_update of 9.718088251550554e-6
+Overall min_t:0.47064931332358273
+-2.597622069927877
+1.2860766361586107
+Loss:
+Minimum: -2.597622069927877
+Maximum: 1.2860766361586107
+SUM: 0.0
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+1.737351516678439
+0.0060656264440638145
+3.1497775838357595e-5
+Convergence reached at step 1649 with max_update of 9.275301676212045e-6
+Overall min_t:0.37280326854891693
+-2.5844339664982146
+1.5992911515498403
+Loss:
+Minimum: -2.5844339664982146
+Maximum: 1.5992911515498403
+SUM: -4.547473508864641e-13
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+1.0809677137848803
+0.003942628895239164
+2.1209533469056703e-5
+Convergence reached at step 1641 with max_update of 9.720091763159856e-6
+Overall min_t:0.3706970418648373
+-2.4669741372280525
+1.9310897366527682
+Loss:
+Minimum: -2.4669741372280525
+Maximum: 1.9310897366527682
+SUM: -9.094947017729282e-13
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.6955193243578149
+0.0026752697345654624
+1.6479895262975776e-5
+Convergence reached at step 1623 with max_update of 9.799516806856349e-6
+Overall min_t:0.3007294285032266
+-2.2239755257279326
+2.0033851249337227
+Loss:
+Minimum: -2.2239755257279326
+Maximum: 2.0033851249337227
+SUM: -2.9558577807620168e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.47609412902652054
+0.0020037138296364657
+1.2892138898782564e-5
+Convergence reached at step 1534 with max_update of 9.074786335739142e-6
+Overall min_t:0.16065383299636232
+-2.341459505283957
+2.1065372284061787
+Loss:
+Minimum: -2.341459505283957
+Maximum: 2.1065372284061787
+SUM: 2.9558577807620168e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.379328243224957
+0.001774509975671228
+1.15884672723654e-5
+Convergence reached at step 1532 with max_update of 9.63122776567793e-6
+Overall min_t:0.081867162864608
+0.000390625
+Have all the divergences
+Divergence sum: -0.2011785004823743
+0.0014610430288272672
+Convergence reached at step 946 with max_update of 9.971415780159915e-6
+Example heights: 1.3131980898582758  and  1.3131980898582758 and 11.313198089858275
+Specs: 257  257  132098  1024  131072 264192
+We now have 132098 valid nodes
+We've filled up 131072 triangles
+We've filled up 262144 triangles
+[charcol (fast)] Parsing OBJ: mesh.obj ...
+[charcol (fast)]   132,098 vertices | 264,192 faces
+[charcol (fast)]   top_faces=131,072  sigma=3.002  radius=5
+[charcol (fast)]   dome=21.86mm  light_z=0.7523  plane_z=-0.7695
+[charcol (fast)] Tracing 4 passes ...
+[charcol (fast)]   100,000/131,072 (76%)[charcol (fast)]   131,072/131,072 (100%)
+[charcol (fast)]   hit_rate=100.0%  sigma=3.002  faces=131,072
+[charcol (fast)] Done -> /Users/admin/causticsEngineering/Final cows/charcol/fast/caustic.png
+TIMING: Julia=18s RayTrace=5s Total=23s

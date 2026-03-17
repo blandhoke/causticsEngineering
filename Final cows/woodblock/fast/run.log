@@ -1,0 +1,112 @@
+  Activating project at `~/causticsEngineering`
+Loading: Final cows/woodblock.png
+Resized to 256x256 — mesh will be ~131k faces
+-3.291385957030295
+0.9999999999999991
+Loss:
+Minimum: -3.291385957030295
+Maximum: 0.9999999999999991
+SUM: 1.546140993013978e-11
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+4.446402042997618
+0.011387838805509108
+8.458423760000944e-5
+Convergence reached at step 1666 with max_update of 9.920896985577965e-6
+Overall min_t:0.35256713211375235
+-3.7887708795221937
+1.4793767444774872
+Loss:
+Minimum: -3.7887708795221937
+Maximum: 1.4793767444774872
+SUM: -1.8189894035458565e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+2.803749212539839
+0.006984164571695728
+5.006145273553142e-5
+Convergence reached at step 1653 with max_update of 9.498987674509222e-6
+Overall min_t:0.2632422158506269
+-3.8796354360310996
+1.9179033252667246
+Loss:
+Minimum: -3.8796354360310996
+Maximum: 1.9179033252667246
+SUM: -9.094947017729282e-13
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+2.0833615516000967
+0.004901837886981672
+3.608266814859068e-5
+Convergence reached at step 1651 with max_update of 9.16790611288576e-6
+Overall min_t:0.23414708777533372
+-3.940529098610275
+2.270615420789584
+Loss:
+Minimum: -3.940529098610275
+Maximum: 2.270615420789584
+SUM: 1.8189894035458565e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+1.5905114055145406
+0.003370251893166008
+2.9175702748210167e-5
+Convergence reached at step 1643 with max_update of 9.615439659204084e-6
+Overall min_t:0.181392228830808
+-3.9808832916522774
+2.4280456177996252
+Loss:
+Minimum: -3.9808832916522774
+Maximum: 2.4280456177996252
+SUM: -1.8189894035458565e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+1.2782726017149821
+0.002607641198161432
+2.2292310829881144e-5
+Convergence reached at step 1640 with max_update of 9.848918456920596e-6
+Overall min_t:0.1295560144579239
+-3.9369337492785323
+2.5263814516447356
+Loss:
+Minimum: -3.9369337492785323
+Maximum: 2.5263814516447356
+SUM: -9.094947017729282e-13
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+1.1142182568481669
+0.002258403567895634
+1.888111761553272e-5
+Convergence reached at step 1639 with max_update of 9.605674704513122e-6
+Overall min_t:0.08370027605957604
+0.000390625
+Have all the divergences
+Divergence sum: -0.18824764273548666
+0.0017326145061932492
+Convergence reached at step 954 with max_update of 9.810375912137512e-6
+Example heights: 1.7691304391872247  and  1.7691304391872247 and 11.769130439187224
+Specs: 257  257  132098  1024  131072 264192
+We now have 132098 valid nodes
+We've filled up 131072 triangles
+We've filled up 262144 triangles
+[woodblock (fast)] Parsing OBJ: mesh.obj ...
+[woodblock (fast)]   132,098 vertices | 264,192 faces
+[woodblock (fast)]   top_faces=131,072  sigma=3.002  radius=5
+[woodblock (fast)]   dome=21.92mm  light_z=0.7524  plane_z=-0.7695
+[woodblock (fast)] Tracing 4 passes ...
+[woodblock (fast)]   100,000/131,072 (76%)[woodblock (fast)]   131,072/131,072 (100%)
+[woodblock (fast)]   hit_rate=100.0%  sigma=3.002  faces=131,072
+[woodblock (fast)] Done -> /Users/admin/causticsEngineering/Final cows/woodblock/fast/caustic.png
+TIMING: Julia=19s RayTrace=4s Total=23s

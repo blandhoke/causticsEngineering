@@ -1,0 +1,112 @@
+  Activating project at `~/causticsEngineering`
+Loading: Final cows/ banknote.png
+Resized to 256x256 — mesh will be ~131k faces
+-2.1206987781562217
+0.9107034914106156
+Loss:
+Minimum: -2.1206987781562217
+Maximum: 0.9107034914106156
+SUM: 3.637978807091713e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+2.7048580609507855
+0.007488536337193137
+5.661600411716261e-5
+Convergence reached at step 1655 with max_update of 9.90214879661e-6
+Overall min_t:0.5399452551862838
+-2.4212432026137547
+1.304799563980053
+Loss:
+Minimum: -2.4212432026137547
+Maximum: 1.304799563980053
+SUM: 0.0
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+1.3249232704519402
+0.0059731443826867075
+2.6592996863874137e-5
+Convergence reached at step 1647 with max_update of 9.220552608394938e-6
+Overall min_t:0.45065046045478885
+-2.2648715050511075
+1.5815790761628465
+Loss:
+Minimum: -2.2648715050511075
+Maximum: 1.5815790761628465
+SUM: 0.0
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.7854551595055327
+0.004120059434867462
+1.932755796114923e-5
+Convergence reached at step 1632 with max_update of 9.912892150116074e-6
+Overall min_t:0.4816019279452623
+-2.2116135857447725
+1.8661503032407802
+Loss:
+Minimum: -2.2116135857447725
+Maximum: 1.8661503032407802
+SUM: 1.3642420526593924e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.4561278757234641
+0.002984183096201454
+1.4769877728441256e-5
+Convergence reached at step 1536 with max_update of 8.551362274402397e-6
+Overall min_t:0.2840098901962311
+-2.1724135651888266
+1.834312755904691
+Loss:
+Minimum: -2.1724135651888266
+Maximum: 1.834312755904691
+SUM: 2.1600499167107046e-12
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.42729592080297363
+0.0025036594828678383
+1.2834971712808822e-5
+Convergence reached at step 1531 with max_update of 9.939190060029486e-6
+Overall min_t:0.14911470367629184
+-2.175939215340531
+1.8088880706753863
+Loss:
+Minimum: -2.175939215340531
+Maximum: 1.8088880706753863
+SUM: -1.1368683772161603e-13
+(256, 256)
+(256, 256)
+(256, 256)
+Building Phi
+0.40790327202245213
+0.002302014024126627
+1.1883018536156069e-5
+Convergence reached at step 1531 with max_update of 8.446445071171316e-6
+Overall min_t:0.07551810337349797
+0.000390625
+Have all the divergences
+Divergence sum: -0.20998107444555147
+0.0012996455969327223
+Convergence reached at step 944 with max_update of 9.952139081949161e-6
+Example heights: 1.1381263055343562  and  1.1381263055343562 and 11.138126305534357
+Specs: 257  257  132098  1024  131072 264192
+We now have 132098 valid nodes
+We've filled up 131072 triangles
+We've filled up 262144 triangles
+[banknote (fast)] Parsing OBJ: mesh.obj ...
+[banknote (fast)]   132,098 vertices | 264,192 faces
+[banknote (fast)]   top_faces=131,072  sigma=3.002  radius=5
+[banknote (fast)]   dome=21.84mm  light_z=0.7523  plane_z=-0.7695
+[banknote (fast)] Tracing 4 passes ...
+[banknote (fast)]   100,000/131,072 (76%)[banknote (fast)]   131,072/131,072 (100%)
+[banknote (fast)]   hit_rate=100.0%  sigma=3.002  faces=131,072
+[banknote (fast)] Done -> /Users/admin/causticsEngineering/Final cows/banknote/fast/caustic.png
+TIMING: Julia=28s RayTrace=6s Total=34s

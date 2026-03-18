@@ -88,10 +88,52 @@ if warnings:
 else:
     print(f"\n  ✓ Dome height fits within 1\" material")
 
-# Write scaled OBJ
-print(f"\nWriting scaled OBJ → {OUTPUT_OBJ.name} ...")
+# Scale vertices
 scaled_verts = verts * SCALE
 
+# ── Axis correction (Y/Z swap) ─────────────────────────────────────────────
+# Solver outputs Z as the 8" axis and Y as the ~2mm relief axis.
+# CNC convention: X=width, Y=length, Z=up (relief). Detect and fix.
+y_span = scaled_verts[:,1].max() - scaled_verts[:,1].min()
+z_span = scaled_verts[:,2].max() - scaled_verts[:,2].min()
+
+if z_span > y_span * 5:
+    print(f"\n── Axis correction ───────────────────────────────────")
+    print(f"  Detected Y/Z swap (Z span={z_span*1000:.1f}mm >> Y span={y_span*1000:.1f}mm)")
+    print(f"  Rotating -90° around X: Y→Z, Z→-Y")
+    old_y = scaled_verts[:,1].copy()
+    old_z = scaled_verts[:,2].copy()
+    scaled_verts[:,1] = old_z     # new Y = old Z (the 8" length axis)
+    scaled_verts[:,2] = -old_y    # new Z = -old Y (relief, pointing up)
+else:
+    print(f"\n── Axis correction ───────────────────────────────────")
+    print(f"  Axes already correct (Y span={y_span*1000:.1f}mm, Z span={z_span*1000:.1f}mm)")
+
+# ── Reposition to CNC origin ───────────────────────────────────────────────
+# Find upper vertex cluster (caustic surface) via bimodal Z split
+z = scaled_verts[:,2]
+z_mid = (z.min() + z.max()) / 2
+upper_z = z[z >= z_mid]
+z_peak = upper_z.max()
+caustic_relief_mm = (upper_z.max() - upper_z.min()) * 1000
+
+# Shift: XY origin at front-left corner, Z=0 at caustic peak (cuts go negative)
+scaled_verts[:,0] -= scaled_verts[:,0].min()
+scaled_verts[:,1] -= scaled_verts[:,1].min()
+scaled_verts[:,2] -= z_peak
+
+cut_depth_in = (caustic_relief_mm * 1.05) / 25.4
+
+print(f"\n── CAUSTICFORGE-READY ────────────────────────────────")
+print(f"  Axis orientation: X=width Y=length Z=up (CNC convention) ✓")
+print(f"  XY origin: front-left corner at (0, 0) ✓")
+print(f"  Z=0 at caustic peak, cuts go negative ✓")
+print(f"  Caustic relief: {caustic_relief_mm:.3f}mm = {caustic_relief_mm/25.4:.4f}\"")
+print(f"  Cut depth (relief + 5%): {cut_depth_in:.4f}\"")
+print(f"  Ready to import into Blender — no manual rotation needed")
+
+# Write scaled + corrected OBJ
+print(f"\nWriting scaled OBJ → {OUTPUT_OBJ.name} ...")
 out_lines = []
 vi = 0
 for line in lines:

@@ -874,15 +874,17 @@ function engineer_caustics(img)
     oneIteration(meshy, img3, "it5")
     oneIteration(meshy, img3, "it6")
 
-    artifactSize = 0.1  # meters
-
     # Configurable via environment variables — override without editing source:
-    #   CAUSTIC_FOCAL_LENGTH=0.5 julia run_prod.jl
-    #   CAUSTIC_HEIGHT_SCALE=2.0 julia run_prod.jl
-    focalLength  = parse(Float64, get(ENV, "CAUSTIC_FOCAL_LENGTH",  "0.75"))
+    #   CAUSTIC_ARTIFACT_SIZE=0.6096 julia run_prod.jl   (24" piece)
+    #   CAUSTIC_ARTIFACT_SIZE=0.2032 julia run_prod.jl   (8" piece)
+    #   CAUSTIC_FOCAL_LENGTH=1.219   julia run_prod.jl   (48" throw)
+    #   CAUSTIC_HEIGHT_SCALE=2.0     julia run_prod.jl
+    artifactSize = parse(Float64, get(ENV, "CAUSTIC_ARTIFACT_SIZE", "0.6096"))
+    focalLength  = parse(Float64, get(ENV, "CAUSTIC_FOCAL_LENGTH",  "1.219"))
     heightScale  = parse(Float64, get(ENV, "CAUSTIC_HEIGHT_SCALE",  "1.0"))
 
-    println("CAUSTIC_FOCAL_LENGTH  = $focalLength m")
+    println("CAUSTIC_ARTIFACT_SIZE = $artifactSize m  ($(round(artifactSize/0.0254, digits=1))\" piece)")
+    println("CAUSTIC_FOCAL_LENGTH  = $focalLength m  ($(round(focalLength/0.0254, digits=1))\" throw)")
     println("CAUSTIC_HEIGHT_SCALE  = $heightScale")
 
     h, metersPerPixel = findSurface(meshy, img3, focalLength, artifactSize)

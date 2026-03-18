@@ -16,17 +16,17 @@ Material limits:
 """
 
 from pathlib import Path
+import os
 import sys
 import numpy as np
 
 INPUT_OBJ  = Path("/Users/admin/causticsEngineering/examples/original_image.obj")
-OUTPUT_OBJ = Path("/Users/admin/causticsEngineering/examples/physical_lens_8x8.obj")
+_size_in   = round(float(os.environ.get("CAUSTIC_TARGET_SIZE", "0.6096")) / 0.0254)
+OUTPUT_OBJ = Path(f"/Users/admin/causticsEngineering/examples/physical_lens_{int(_size_in)}x{int(_size_in)}.obj")
 
-TARGET_SIZE_M   = 0.2032   # 8 inches in metres
-# KEEP IN SYNC WITH focalLength in src/create_mesh.jl
-# Current value: 0.75m (empirically determined to fit 1" acrylic at 8"x8")
-# Focal length calibration: f=0.20→34.6mm, f=0.60→26.1mm, f=0.75→25.2mm
-NATIVE_FOCAL_M  = 0.75     # metres
+# Match CAUSTIC_ARTIFACT_SIZE and CAUSTIC_FOCAL_LENGTH used in the solver run
+TARGET_SIZE_M   = float(os.environ.get("CAUSTIC_TARGET_SIZE",   "0.6096"))  # default 24"
+NATIVE_FOCAL_M  = float(os.environ.get("CAUSTIC_FOCAL_LENGTH",  "1.219"))   # default 48" throw
 MATERIAL_1IN_MM  = 25.4    # 1" cast acrylic (reference only — not a hard limit)
 MATERIAL_2IN_MM  = 50.8    # 2" cast acrylic (reference only)
 MATERIAL_MIN_MM  = 5.0     # too flat to mill well

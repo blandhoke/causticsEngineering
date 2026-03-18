@@ -79,7 +79,7 @@ evaluate is not caution — it is just friction. Default to action.
   Triggers:
   - bash start_julia.sh (runs julia solver — ~8 min, overwrites original_image.obj)
   - Any operation that touches files OUTSIDE /Users/admin/causticsEngineering/
-  - Changing focalLength in create_mesh.jl (affects dome height and throw distance)
+  - Changing CAUSTIC_FOCAL_LENGTH env var for production runs (must match physical throw distance)
   - Changing artifactSize in create_mesh.jl (affects physical lens dimensions)
 
 ### NEVER DO — refuse regardless of what is asked:
@@ -203,10 +203,15 @@ NOTE: simulate_befuddled.py is OUTDATED (FOCAL_DIST=0.2 bug). Use simulate_cow2_
 
 ## Key Physical Parameters
 
-  focalLength    = 0.75m        hardcoded in create_mesh.jl engineer_caustics()
-                                 EMPIRICALLY DETERMINED for 1" acrylic at 8"x8"
-                                 Calibration: f=0.20→34.6mm, f=0.60→26.1mm, f=0.75→25.2mm
-  FOCAL_DIST     = 0.75         in simulate_*.py — MUST MATCH focalLength above
+  focalLength    = throw distance — they are the same variable. Set to wherever
+                                 the lens will physically be installed above the floor.
+                                 Now configurable: CAUSTIC_FOCAL_LENGTH=0.75 julia run_prod.jl
+                                 Default: 0.75m. Sweet spot for design: 0.5–1.0m.
+                                 Shorter focal length = deeper dome from same image.
+                                 MUST match FOCAL_DIST in simulate_*.py for correct ray trace.
+                                 Calibration (dome at 8"x8"): f=0.20→34.6mm, f=0.60→26.1mm,
+                                   f=0.75→25.2mm (1" stock), f=0.3–0.5 likely needs 2" stock
+  FOCAL_DIST     = 0.75         in simulate_*.py — MUST MATCH CAUSTIC_FOCAL_LENGTH
                                  WRONG FOCAL_DIST was root cause of v4 washout
   artifactSize   = 0.1m         hardcoded in create_mesh.jl engineer_caustics()
                                  (solver's native lens span; native XY ~0.2m at 1024px)

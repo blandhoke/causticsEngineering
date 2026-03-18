@@ -52,7 +52,7 @@ SCALE = TARGET_SIZE_M / native_span_m
 
 physical_dome_mm = native_dome_mm * SCALE
 physical_span_mm = native_span_mm * SCALE
-physical_throw_m = NATIVE_FOCAL_M * SCALE
+physical_throw_m = NATIVE_FOCAL_M  # throw is a fixed installation distance, does not scale with lens size
 
 print(f"\n── Native mesh ───────────────────────────────────────")
 print(f"  Vertices:    {len(verts):,}")
@@ -67,15 +67,7 @@ print(f"  XY span:        {physical_span_mm:.2f} mm  ({physical_span_mm/25.4:.3f
 print(f"  Dome height:    {physical_dome_mm:.2f} mm  ({physical_dome_mm/25.4:.3f}\")")
 print(f"  Throw distance: {physical_throw_m*1000:.1f} mm  ({physical_throw_m/0.0254:.2f}\")")
 
-# Stock guidance (informational only — no ceiling clamp)
-if physical_dome_mm <= MATERIAL_1IN_MM:
-    print(f"\n  ✓ Dome {physical_dome_mm:.2f}mm fits 1\" stock ({MATERIAL_1IN_MM}mm)")
-elif physical_dome_mm <= MATERIAL_2IN_MM:
-    print(f"\n  ⚠  Dome {physical_dome_mm:.2f}mm exceeds 1\" stock — use 2\" cast acrylic")
-else:
-    print(f"\n  ⚠  Dome {physical_dome_mm:.2f}mm exceeds 2\" stock — use custom thickness")
-if physical_dome_mm < MATERIAL_MIN_MM:
-    print(f"  ⚠  Dome {physical_dome_mm:.2f}mm is very shallow (<{MATERIAL_MIN_MM}mm) — may not cut well")
+# Stock guidance deferred — printed after caustic_relief_mm is computed below
 
 # Scale vertices
 scaled_verts = verts * SCALE
@@ -105,6 +97,16 @@ z_mid = (z.min() + z.max()) / 2
 upper_z = z[z >= z_mid]
 z_peak = upper_z.max()
 caustic_relief_mm = (upper_z.max() - upper_z.min()) * 1000
+
+# Stock guidance (informational only — based on caustic relief, the CNC-relevant depth)
+if caustic_relief_mm <= MATERIAL_1IN_MM:
+    print(f"\n  ✓ Relief {caustic_relief_mm:.2f}mm fits 1\" stock ({MATERIAL_1IN_MM}mm)")
+elif caustic_relief_mm <= MATERIAL_2IN_MM:
+    print(f"\n  ⚠  Relief {caustic_relief_mm:.2f}mm exceeds 1\" stock — use 2\" cast acrylic")
+else:
+    print(f"\n  ⚠  Relief {caustic_relief_mm:.2f}mm exceeds 2\" stock — use custom thickness")
+if caustic_relief_mm < MATERIAL_MIN_MM:
+    print(f"  ⚠  Relief {caustic_relief_mm:.2f}mm is very shallow (<{MATERIAL_MIN_MM}mm) — may not cut well")
 
 # Shift: XY origin at front-left corner, Z=0 at caustic peak (cuts go negative)
 scaled_verts[:,0] -= scaled_verts[:,0].min()

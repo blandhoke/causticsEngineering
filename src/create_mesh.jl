@@ -875,10 +875,19 @@ function engineer_caustics(img)
     oneIteration(meshy, img3, "it6")
 
     artifactSize = 0.1  # meters
-    focalLength = 0.75 # meters  (optimized for 1" acrylic at 8"x8"; targets ~24mm dome, throw ~30")
+
+    # Configurable via environment variables — override without editing source:
+    #   CAUSTIC_FOCAL_LENGTH=0.5 julia run_prod.jl
+    #   CAUSTIC_HEIGHT_SCALE=2.0 julia run_prod.jl
+    focalLength  = parse(Float64, get(ENV, "CAUSTIC_FOCAL_LENGTH",  "0.75"))
+    heightScale  = parse(Float64, get(ENV, "CAUSTIC_HEIGHT_SCALE",  "1.0"))
+
+    println("CAUSTIC_FOCAL_LENGTH  = $focalLength m")
+    println("CAUSTIC_HEIGHT_SCALE  = $heightScale")
+
     h, metersPerPixel = findSurface(meshy, img3, focalLength, artifactSize)
 
-    setHeights!(meshy, h, 1.0, 10)
+    setHeights!(meshy, h, heightScale, 10)
 
     solidMesh = solidify(meshy)
     saveObj!(

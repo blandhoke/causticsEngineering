@@ -27,8 +27,9 @@ TARGET_SIZE_M   = 0.2032   # 8 inches in metres
 # Current value: 0.75m (empirically determined to fit 1" acrylic at 8"x8")
 # Focal length calibration: f=0.20→34.6mm, f=0.60→26.1mm, f=0.75→25.2mm
 NATIVE_FOCAL_M  = 0.75     # metres
-MATERIAL_MAX_MM = 25.4     # 1" cast acrylic
-MATERIAL_MIN_MM = 5.0      # too flat to mill well
+MATERIAL_1IN_MM  = 25.4    # 1" cast acrylic (reference only — not a hard limit)
+MATERIAL_2IN_MM  = 50.8    # 2" cast acrylic (reference only)
+MATERIAL_MIN_MM  = 5.0     # too flat to mill well
 
 print(f"── Physical Lens Scaler ──────────────────────────────")
 print(f"  Input:  {INPUT_OBJ.name}")
@@ -66,27 +67,15 @@ print(f"  XY span:        {physical_span_mm:.2f} mm  ({physical_span_mm/25.4:.3f
 print(f"  Dome height:    {physical_dome_mm:.2f} mm  ({physical_dome_mm/25.4:.3f}\")")
 print(f"  Throw distance: {physical_throw_m*1000:.1f} mm  ({physical_throw_m/0.0254:.2f}\")")
 
-# Warnings
-warnings = []
-if physical_dome_mm > MATERIAL_MAX_MM:
-    warnings.append(
-        f"DOME {physical_dome_mm:.1f}mm EXCEEDS 1\" MATERIAL ({MATERIAL_MAX_MM}mm) — cannot mill\n"
-        f"  Options:\n"
-        f"    (a) Use 1.5\" (38.1mm) or 2\" (50.8mm) cast acrylic stock\n"
-        f"    (b) Reduce physical size: max span for 1\" = {native_dome_mm * 25.4 / native_dome_mm:.0f}mm "
-        f"→ need MATERIAL_MAX_MM >= {physical_dome_mm:.0f}mm\n"
-        f"    (c) Reduce solver focalLength in create_mesh.jl to produce shallower dome"
-    )
-if physical_dome_mm < MATERIAL_MIN_MM:
-    warnings.append(f"DOME {physical_dome_mm:.1f}mm is very shallow (<{MATERIAL_MIN_MM}mm) — may not cut well")
-
-if warnings:
-    print("\n── WARNINGS ──────────────────────────────────────────")
-    for w in warnings:
-        print(f"  ⚠  {w}")
-    # User is aware of tight margin — continue anyway and produce CNC file
+# Stock guidance (informational only — no ceiling clamp)
+if physical_dome_mm <= MATERIAL_1IN_MM:
+    print(f"\n  ✓ Dome {physical_dome_mm:.2f}mm fits 1\" stock ({MATERIAL_1IN_MM}mm)")
+elif physical_dome_mm <= MATERIAL_2IN_MM:
+    print(f"\n  ⚠  Dome {physical_dome_mm:.2f}mm exceeds 1\" stock — use 2\" cast acrylic")
 else:
-    print(f"\n  ✓ Dome height fits within 1\" material")
+    print(f"\n  ⚠  Dome {physical_dome_mm:.2f}mm exceeds 2\" stock — use custom thickness")
+if physical_dome_mm < MATERIAL_MIN_MM:
+    print(f"  ⚠  Dome {physical_dome_mm:.2f}mm is very shallow (<{MATERIAL_MIN_MM}mm) — may not cut well")
 
 # Scale vertices
 scaled_verts = verts * SCALE

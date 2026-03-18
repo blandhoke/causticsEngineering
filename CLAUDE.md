@@ -73,11 +73,11 @@ evaluate is not caution — it is just friction. Default to action.
 
   Example format:
     ⚠ THIS IS SUPER CRITICAL ⚠
-    About to run the Julia solver — this takes ~45 min and will permanently
+    About to run the Julia solver — this takes ~8 min and will permanently
     overwrite examples/original_image.obj. OK to proceed?
 
   Triggers:
-  - bash start_julia.sh (runs julia solver — ~45 min, overwrites original_image.obj)
+  - bash start_julia.sh (runs julia solver — ~8 min, overwrites original_image.obj)
   - Any operation that touches files OUTSIDE /Users/admin/causticsEngineering/
   - Changing focalLength in create_mesh.jl (affects dome height and throw distance)
   - Changing artifactSize in create_mesh.jl (affects physical lens dimensions)
@@ -481,7 +481,7 @@ Do not run solver with either input until that file exists and approves the inpu
   HYPER  128px  -> ~33k faces    -> Julia ~10s   -> ray trace ~30s    -> total ~1 min
   FAST   256px  -> ~131k faces   -> Julia ~45s   -> ray trace ~2 min  -> total ~3 min
   NORMAL 512px  -> ~525k faces   -> Julia ~5 min -> ray trace ~8 min  -> total ~13 min
-  PROD   1024px -> ~2.1M faces   -> Julia ~45min -> ray trace ~35 min -> total ~80 min
+  PROD   1024px -> ~2.1M faces   -> Julia ~8min  -> ray trace ~35 min -> total ~45 min
 
 Pipeline entry points:
   HYPER:  run_hyper.jl + simulate_hyper.py   orchestrated by run_pipeline_hyper.sh

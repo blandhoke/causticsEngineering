@@ -1,0 +1,41 @@
+── Physical Lens Scaler ──────────────────────────────
+  Input:  original_image.obj
+  Output: physical_lens_8x8.obj
+  Target: 203.2 mm x 203.2 mm  (8")
+
+Parsing OBJ...
+
+── Native mesh ───────────────────────────────────────
+  Vertices:    2,101,250
+  XY span:     406.70 mm  (0.40670 m)
+  Dome height: 50.44 mm
+
+── Scale factor ──────────────────────────────────────
+  203.2 mm / 406.70 mm = 0.4996x  (all axes)
+
+── Scaled (physical) ─────────────────────────────────
+  XY span:        203.20 mm  (8.000")
+  Dome height:    25.20 mm  (0.992")
+  Throw distance: 609.6 mm  (24.00")
+
+── Axis correction ───────────────────────────────────
+  Axes already correct (Y span=203.2mm, Z span=25.2mm)
+
+  ✓ Relief 6.28mm fits 1" stock (25.4mm)
+
+── CAUSTICFORGE-READY ────────────────────────────────
+  Axis orientation: X=width Y=length Z=up (CNC convention) ✓
+  XY origin: front-left corner at (0, 0) ✓
+  Z=0 at caustic peak, cuts go negative ✓
+  Caustic relief: 6.275mm = 0.2471"
+  Cut depth (relief + 5%): 0.2594"
+  Ready to import into Blender — no manual rotation needed
+
+Writing scaled OBJ → physical_lens_8x8.obj ...
+  Written: 178.2 MB
+
+── Done ──────────────────────────────────────────────
+  Physical OBJ: /Users/admin/Documents/Claude/causticsEngineering_v1/examples/physical_lens_8x8.obj
+  XY:    203.2 mm x 203.2 mm
+  Dome:  25.20 mm
+  Throw: 610 mm  (24.0")

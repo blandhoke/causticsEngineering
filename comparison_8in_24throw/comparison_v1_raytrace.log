@@ -1,0 +1,9 @@
+[v1_8in_24throw_1024px] Parsing OBJ: physical_lens_8x8.obj ...
+[v1_8in_24throw_1024px]   2,101,250 vertices | 4,202,496 faces
+[v1_8in_24throw_1024px]   top_faces=2,097,152  sigma=0.751 (auto)  radius=2
+[v1_8in_24throw_1024px]   dome=25.20mm  light_z=0.6096  plane_z=-0.6348
+[v1_8in_24throw_1024px] Tracing 16 passes (sigma=0.751 radius=2) ...
+[v1_8in_24throw_1024px]   100,000/2,097,152 (5%)[v1_8in_24throw_1024px]   200,000/2,097,152 (10%)[v1_8in_24throw_1024px]   300,000/2,097,152 (14%)[v1_8in_24throw_1024px]   400,000/2,097,152 (19%)[v1_8in_24throw_1024px]   500,000/2,097,152 (24%)[v1_8in_24throw_1024px]   600,000/2,097,152 (29%)[v1_8in_24throw_1024px]   700,000/2,097,152 (33%)[v1_8in_24throw_1024px]   800,000/2,097,152 (38%)[v1_8in_24throw_1024px]   900,000/2,097,152 (43%)[v1_8in_24throw_1024px]   1,000,000/2,097,152 (48%)[v1_8in_24throw_1024px]   1,100,000/2,097,152 (52%)[v1_8in_24throw_1024px]   1,200,000/2,097,152 (57%)[v1_8in_24throw_1024px]   1,300,000/2,097,152 (62%)[v1_8in_24throw_1024px]   1,400,000/2,097,152 (67%)[v1_8in_24throw_1024px]   1,500,000/2,097,152 (72%)[v1_8in_24throw_1024px]   1,600,000/2,097,152 (76%)[v1_8in_24throw_1024px]   1,700,000/2,097,152 (81%)[v1_8in_24throw_1024px]   1,800,000/2,097,152 (86%)[v1_8in_24throw_1024px]   1,900,000/2,097,152 (91%)[v1_8in_24throw_1024px]   2,000,000/2,097,152 (95%)[v1_8in_24throw_1024px]   2,097,152/2,097,152 (100%)
+[v1_8in_24throw_1024px]   hit_rate=100.0%  sigma=0.751  faces=2,097,152
+[v1_8in_24throw_1024px] Parameters: sigma=auto  passes=16  gamma=0.7  post-sigma=0.0  interp=nearest  unsharp=0.0
+[v1_8in_24throw_1024px] Done -> comparison_v1_caustic.png

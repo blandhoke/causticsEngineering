@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "session_last": "v000_pre_architecture",
+  "session_last": "v001",
   "session_last_date": "2026-04-08",
 
   "solver_v1": {
@@ -38,27 +38,57 @@
   "physical_lens_pipeline": {
     "script": "make_physical_lens.py",
     "status": "functional",
-    "dual_surface_refraction_corrected": "UNKNOWN — AUDIT REQUIRED",
+    "dual_surface_refraction_corrected": "NOT NEEDED — solver uses thin lens formula (n-1) which already accounts for both refractive surfaces. Audit: AUDIT_dual_refraction.md",
+    "correction_factor": "none (1.0) — solver's (n-1) formula is the dual-surface plano-convex thin lens equation",
     "existing_physical_objs": {
       "charcol_24in_standard": {
         "path": "Final cows/charcol/24in_standard/physical_lens_24x24.obj",
         "size_inches": 24,
         "relief_mm": 6.86,
-        "dual_refraction_applied": "UNKNOWN"
+        "dual_refraction_applied": "inherent in solver — no post-correction needed"
       },
       "charcol_24in_deep": {
         "path": "Final cows/charcol/24in_deep/physical_lens_24x24_deep.obj",
         "size_inches": 24,
         "relief_mm": 8.50,
-        "dual_refraction_applied": "UNKNOWN"
+        "dual_refraction_applied": "inherent in solver — no post-correction needed"
       },
       "example_8in": {
         "path": "examples/physical_lens_8x8.obj",
         "size_inches": 8,
         "relief_mm": 4.48,
-        "dual_refraction_applied": "UNKNOWN"
+        "dual_refraction_applied": "inherent in solver — no post-correction needed"
+      },
+      "woodblock_24in_standard": {
+        "path": "Final cows/woodblock/24in_standard/physical_lens_24x24.obj",
+        "size_inches": 24,
+        "relief_mm": 6.166,
+        "dual_refraction_applied": "inherent in solver — no post-correction needed",
+        "generated": "2026-04-08 v001"
+      },
+      "woodblock_8in": {
+        "path": "Final cows/woodblock/8in/physical_lens_8x8.obj",
+        "size_inches": 8,
+        "relief_mm": 2.055,
+        "dual_refraction_applied": "inherent in solver — no post-correction needed",
+        "generated": "2026-04-08 v001"
       }
     }
+  },
+
+  "bit_resolution_analysis": {
+    "woodblock_8in": {
+      "report": "ANALYSIS_woodblock_8in_bit_resolution.md",
+      "mesh_cell_spacing_in": 0.00781,
+      "min_concavity_radius_in": 14.09,
+      "max_slope_deg": 1.39,
+      "recommended_finish_bit": "1/8 ball nose @ 10% stepover (0.0125\")",
+      "recommended_rough_bit": "1/4 ball nose @ 40% stepover (0.100\")",
+      "total_time_normal_min": 56,
+      "total_time_superfast_min": 40,
+      "key_finding": "1/4 bit overshoots mesh resolution (3.2 cells/step). 1/8 matches (1.6 cells/step). 1/16+ finer than mesh — no gain."
+    },
+    "size_dependent_rule": "8in → 1/8 finish (cell=0.0078\"). 24in → 1/4 finish (cell=0.023\"). Bit stepover should be ≤ 2x mesh cell spacing."
   },
 
   "causticforge_addon": {
@@ -82,13 +112,15 @@
   "blockers": [
     {
       "id": "DUAL_REFRACTION",
-      "severity": "CRITICAL",
-      "description": "Solver uses single-surface refraction (air→acrylic). Physical lens has dual refraction (air→acrylic→air). Features appear at ~1.49x predicted radius. Must audit pipeline and correct before first CNC cut.",
-      "status": "unresolved",
-      "blocks": "all CNC production"
+      "severity": "RESOLVED",
+      "description": "FALSE ALARM. Solver uses (n-1) thin lens formula which IS the dual-surface plano-convex equation. Both refractive surfaces are accounted for. Ray tracer also applies Snell's law twice (entry + exit). No correction needed. See AUDIT_dual_refraction.md.",
+      "status": "resolved_false_alarm",
+      "resolved_date": "2026-04-08",
+      "resolved_session": "v001",
+      "blocks": "nothing"
     }
   ],
 
-  "next_session_task": "HANDOFF_v001",
-  "next_session_scope": "Audit dual-refraction correction, generate woodblock physical lens OBJs (24in + 8in), analyze 8in bit resolution (1/4 vs 1/8 ball nose)"
+  "next_session_task": "HANDOFF_v002",
+  "next_session_scope": "Blender import of woodblock (24in + 8in) physical lens OBJs, CAUSTICFORGE G-code export, bit selection confirmation. All meshes CNC-ready. No blockers remain."
 }

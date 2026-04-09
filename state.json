@@ -40,6 +40,7 @@
     "status": "functional",
     "dual_surface_refraction_corrected": "NOT NEEDED — solver uses thin lens formula (n-1) which already accounts for both refractive surfaces. Audit: AUDIT_dual_refraction.md",
     "correction_factor": "none (1.0) — solver's (n-1) formula is the dual-surface plano-convex thin lens equation",
+    "source_image_uncertainty": "UNVERIFIED — v1 woodblock run.log says 'Final cows/woodblock.png' but that file no longer exists. Only 'Final cows/woodblock2.png' exists. May be different images. See HANDOFF_v002 Task 1.",
     "existing_physical_objs": {
       "charcol_24in_standard": {
         "path": "Final cows/charcol/24in_standard/physical_lens_24x24.obj",
@@ -64,14 +65,16 @@
         "size_inches": 24,
         "relief_mm": 6.166,
         "dual_refraction_applied": "inherent in solver — no post-correction needed",
-        "generated": "2026-04-08 v001"
+        "generated": "2026-04-08 v001",
+        "source_image": "UNVERIFIED — see source_image_uncertainty"
       },
       "woodblock_8in": {
         "path": "Final cows/woodblock/8in/physical_lens_8x8.obj",
         "size_inches": 8,
         "relief_mm": 2.055,
         "dual_refraction_applied": "inherent in solver — no post-correction needed",
-        "generated": "2026-04-08 v001"
+        "generated": "2026-04-08 v001",
+        "source_image": "UNVERIFIED — see source_image_uncertainty"
       }
     }
   },
@@ -118,9 +121,16 @@
       "resolved_date": "2026-04-08",
       "resolved_session": "v001",
       "blocks": "nothing"
+    },
+    {
+      "id": "SOURCE_IMAGE_UNCERTAINTY",
+      "severity": "WARNING",
+      "description": "V1 woodblock mesh may have been built from woodblock.png (447KB INKFORGE variant) not woodblock2.png (1.39MB). Run.log says 'Final cows/woodblock.png' but that file no longer exists. V2 uses woodblock2.png. If different source images, v1 vs v2 comparison is apples to oranges.",
+      "status": "investigating",
+      "blocks": "confidence in v1 woodblock mesh provenance"
     }
   ],
 
   "next_session_task": "HANDOFF_v002",
-  "next_session_scope": "Blender import of woodblock (24in + 8in) physical lens OBJs, CAUSTICFORGE G-code export, bit selection confirmation. All meshes CNC-ready. No blockers remain."
+  "next_session_scope": "Verify woodblock source image (v1 may have used wrong image). Compare v1 vs v2 8in woodblock meshes head-to-head (geometry, curvature, depth). Report v2 G-code status. Decide which pipeline's output to cut first."
 }

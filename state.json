@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "session_last": "v001",
-  "session_last_date": "2026-04-08",
+  "session_last": "v002",
+  "session_last_date": "2026-04-09",
 
   "solver_v1": {
     "status": "production",
@@ -40,7 +40,7 @@
     "status": "functional",
     "dual_surface_refraction_corrected": "NOT NEEDED — solver uses thin lens formula (n-1) which already accounts for both refractive surfaces. Audit: AUDIT_dual_refraction.md",
     "correction_factor": "none (1.0) — solver's (n-1) formula is the dual-surface plano-convex thin lens equation",
-    "source_image_uncertainty": "UNVERIFIED — v1 woodblock run.log says 'Final cows/woodblock.png' but that file no longer exists. Only 'Final cows/woodblock2.png' exists. May be different images. See HANDOFF_v002 Task 1.",
+    "source_image_uncertainty": "RESOLVED — v1 PROD woodblock mesh (b845296) used INKFORGE/woodblock.png (457KB grayscale, MD5 a08bb8...). V2 used woodblock2.png (1.39MB RGB, MD5 c7ff32...). Different source images confirmed. See VERIFICATION_woodblock_source.md.",
     "existing_physical_objs": {
       "charcol_24in_standard": {
         "path": "Final cows/charcol/24in_standard/physical_lens_24x24.obj",
@@ -66,7 +66,8 @@
         "relief_mm": 6.166,
         "dual_refraction_applied": "inherent in solver — no post-correction needed",
         "generated": "2026-04-08 v001",
-        "source_image": "UNVERIFIED — see source_image_uncertainty"
+        "source_image": "INKFORGE/woodblock.png (457KB grayscale, MD5 a08bb8...)",
+        "solver_params_at_build": "artifactSize=0.1m, focalLength=0.75m (30\" throw) — STALE CONFIG, predates 24\"/48\" defaults"
       },
       "woodblock_8in": {
         "path": "Final cows/woodblock/8in/physical_lens_8x8.obj",
@@ -74,7 +75,8 @@
         "relief_mm": 2.055,
         "dual_refraction_applied": "inherent in solver — no post-correction needed",
         "generated": "2026-04-08 v001",
-        "source_image": "UNVERIFIED — see source_image_uncertainty"
+        "source_image": "INKFORGE/woodblock.png (457KB grayscale, MD5 a08bb8...)",
+        "solver_params_at_build": "artifactSize=0.1m, focalLength=0.75m (30\" throw) — STALE CONFIG, predates 24\"/48\" defaults"
       }
     }
   },
@@ -124,13 +126,40 @@
     },
     {
       "id": "SOURCE_IMAGE_UNCERTAINTY",
+      "severity": "RESOLVED",
+      "description": "CONFIRMED: V1 PROD woodblock mesh used INKFORGE/woodblock.png (457KB, MD5 a08bb8...). V2 used woodblock2.png (1.39MB, MD5 c7ff32...). Different images (r=0.907). The stale run.log in Final cows/woodblock/normal/ refers to an earlier 512px run, not the current 1024px PROD mesh.",
+      "status": "resolved",
+      "resolved_date": "2026-04-09",
+      "resolved_session": "v002",
+      "blocks": "nothing — provenance established"
+    },
+    {
+      "id": "V1_WOODBLOCK_STALE_PARAMS",
       "severity": "WARNING",
-      "description": "V1 woodblock mesh may have been built from woodblock.png (447KB INKFORGE variant) not woodblock2.png (1.39MB). Run.log says 'Final cows/woodblock.png' but that file no longer exists. V2 uses woodblock2.png. If different source images, v1 vs v2 comparison is apples to oranges.",
-      "status": "investigating",
-      "blocks": "confidence in v1 woodblock mesh provenance"
+      "description": "V1 woodblock PROD mesh (b845296) was built with artifactSize=0.1m, focalLength=0.75m (30\" throw). The project now targets 24\"/48\" config. This mesh cannot be used for 48\" installations without re-running the solver.",
+      "status": "open",
+      "blocks": "V1 woodblock mesh at 48\" throw"
     }
   ],
 
-  "next_session_task": "HANDOFF_v002",
-  "next_session_scope": "Verify woodblock source image (v1 may have used wrong image). Compare v1 vs v2 8in woodblock meshes head-to-head (geometry, curvature, depth). Report v2 G-code status. Decide which pipeline's output to cut first."
+  "v1_v2_comparison": {
+    "report": "COMPARISON_v1_v2_woodblock_8in.md",
+    "source_image_match": false,
+    "throw_distance_match": false,
+    "v1_throw_inches": 30,
+    "v2_throw_inches": 48,
+    "v1_native_lens_size_inches": 3.94,
+    "v2_native_lens_size_inches": 24,
+    "depth_v1_inches": 0.081,
+    "depth_v2_inches": 0.378,
+    "depth_ratio_v2_over_v1": 4.66,
+    "refraction_model_equivalent": true,
+    "refraction_equivalence_note": "Both yield slope = delta/(f*(n-1)) in paraxial limit. Depth difference is from different physical configs, not physics errors.",
+    "recommended_cut": "V2 8\" at 48\" throw — purpose-designed for target installation, G-code ready. V1 woodblock uses stale 30\" throw config.",
+    "v2_gcode_status": "ready (roughing + spiral finishing + square cut, CAUSTICFORGE v2.0, 1/4\" ball nose)",
+    "v2_gcode_concern": "128px mesh resolution — 1/4\" ball 20% stepover is finer than mesh cells (0.0625\"). Should run at 256px+ before production."
+  },
+
+  "next_session_task": "HANDOFF_v003",
+  "next_session_scope": "TBD by Claude Chat after reviewing COMPARISON_v1_v2_woodblock_8in.md. Key decisions: (1) Re-run V1 woodblock at 24\"/48\" config for fair comparison? (2) Run V2 at 256px? (3) Proceed with V2 128px cut as proof-of-concept?"
 }

@@ -160,6 +160,29 @@
     "v2_gcode_concern": "128px mesh resolution — 1/4\" ball 20% stepover is finer than mesh cells (0.0625\"). Should run at 256px+ before production."
   },
 
-  "next_session_task": "HANDOFF_v003",
-  "next_session_scope": "TBD by Claude Chat after reviewing COMPARISON_v1_v2_woodblock_8in.md. Key decisions: (1) Re-run V1 woodblock at 24\"/48\" config for fair comparison? (2) Run V2 at 256px? (3) Proceed with V2 128px cut as proof-of-concept?"
+  "comparison_8in_24throw": {
+    "date": "2026-04-09",
+    "session": "v003",
+    "source_image": "woodblock2.png",
+    "config": "8in acrylic / 24in throw",
+    "v1": {
+      "resolution": 1024,
+      "faces": 2097152,
+      "xy_span_inches": 8.0,
+      "dome_mm": 25.20,
+      "relief_mm": 6.28,
+      "relief_inches": 0.247,
+      "stock_fit": "1in OK (0.18mm margin)",
+      "cnc_ready": true
+    },
+    "v2_cascade": {
+      "128": {"edge_r": 0.2489, "depth_uncorr": 0.459, "depth_corr": 0.307, "faces": 32258},
+      "256": {"edge_r": 0.2014, "depth_uncorr": 0.446, "depth_corr": 0.298, "faces": 130050},
+      "512": {"edge_r": 0.1117, "depth_uncorr": 0.461, "depth_corr": 0.308, "faces": 522242}
+    },
+    "recommendation": "V1 1024px for immediate CNC cut. V2 needs more OT iterations at higher resolutions."
+  },
+
+  "next_session_task": "HANDOFF_v004",
+  "next_session_scope": "Review COMPARISON_v1_v2_8in_24throw.md. V1 1024px is CNC-ready. V2 edge_r degrades at higher res — needs more iterations or GPU. Key decisions: (1) Cut V1 8in proof? (2) Tune V2 convergence?"
 }

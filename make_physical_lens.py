@@ -20,9 +20,10 @@ import os
 import sys
 import numpy as np
 
-INPUT_OBJ  = Path("/Users/admin/causticsEngineering/examples/original_image.obj")
+PROJECT_ROOT = Path(__file__).resolve().parent
+INPUT_OBJ  = PROJECT_ROOT / "examples" / "original_image.obj"
 _size_in   = round(float(os.environ.get("CAUSTIC_TARGET_SIZE", "0.6096")) / 0.0254)
-OUTPUT_OBJ = Path(f"/Users/admin/causticsEngineering/examples/physical_lens_{int(_size_in)}x{int(_size_in)}.obj")
+OUTPUT_OBJ = PROJECT_ROOT / "examples" / f"physical_lens_{int(_size_in)}x{int(_size_in)}.obj"
 
 # Match CAUSTIC_ARTIFACT_SIZE and CAUSTIC_FOCAL_LENGTH used in the solver run
 TARGET_SIZE_M   = float(os.environ.get("CAUSTIC_TARGET_SIZE",   "0.6096"))  # default 24"

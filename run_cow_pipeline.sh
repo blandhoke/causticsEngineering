@@ -6,7 +6,7 @@ set -e
 
 IMAGE_PATH="$1"
 SPEED="$2"
-PROJECT="/Users/admin/causticsEngineering"
+PROJECT="$(cd "$(dirname "$0")" && pwd)"
 
 # Derive slug from filename (strip path, extension, spaces, leading space)
 BASENAME=$(basename "$IMAGE_PATH")
